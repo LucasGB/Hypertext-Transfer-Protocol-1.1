@@ -1,22 +1,34 @@
+# Compiler
+CC = gcc
 
-CFLAGS=-static -Wall -g -I/usr/local/uriparser/include/uriparser -I./vendor/buffer/src
-LDFLAGS=-L/usr/local/uriparser/lib -luriparser -L./vendor/buffer/build -lbuffer
+# Flags
+CFLAGS = -I$(LDIR)
 
-SOURCES=$(wildcard src/**/*.c src/*.c)
-OBJECTS=$(patsubst %.c,%.o,$(SOURCES))
+# C files directory
+CDIR = src
 
-TARGET=bin/http
+# Object files directory
+ODIR = src/obj
 
-all: $(TARGET)
+# Library files directory
+LDIR = lib
 
-$(TARGET): build $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
+#LIBS=-lm
 
-build:
-	@mkdir -p bin
+# Dependency files
+_DEPS = url.h connect.h
+DEPS = $(patsubst %,$(LDIR)/%,$(_DEPS))
 
-dev:CFLAGS+=-DNDEBUG
-dev: all
+_OBJ = url.o connect.o
+OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+
+$(ODIR)/%.o: $(CDIR)/%.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+http: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+.PHONY: clean
 
 clean:
-rm -rf bin/http src/*.o *.dSYM
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ 
