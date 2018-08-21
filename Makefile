@@ -19,7 +19,7 @@ LDIR = lib
 _DEPS = url.h connect.h
 DEPS = $(patsubst %,$(LDIR)/%,$(_DEPS))
 
-_OBJ = url.o connect.o
+_OBJ = http.o url.o connect.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(CDIR)/%.c $(DEPS)
