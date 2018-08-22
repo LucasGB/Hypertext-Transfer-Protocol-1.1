@@ -1,32 +1,19 @@
 #ifndef CONNECT_H
 #define CONNECT_H
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <errno.h>
+#include<sys/stat.h>
+#include<fcntl.h>
 
 //#include <buffer.h>
 
 #define RECV_SIZE 1024
 #define BUF_SIZE  RECV_SIZE + 1
-
-#define SERVER_ADDRESS "127.0.0.1"
-#define PORT_NUMBER 9090
-
+#define PORT "9090"
 #define ROOT "/home/suporte"
 
-int init_server(int* listen_fd);
-
-
-
-
-
+int init_connection(char *hostname, char *port, struct addrinfo **res);
 int make_connection(struct addrinfo *res);
 int make_request(int sockfd, char *hostname, char *request_path);
 int check_errors();
