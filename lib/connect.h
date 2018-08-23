@@ -24,9 +24,16 @@
 
 //#define ROOT "/home/suporte"
 
+
+struct Client{
+	int *conn_fd;
+	struct sockaddr_in* address;
+};
+
+
 int init_server(int* listen_fd);
 
-void request_handler(void *new_socket);
+//void request_handler(void *new_socket);
 
 
 
