@@ -10,18 +10,23 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <errno.h>
-
+#include <string.h>
 //#include <buffer.h>
 
 #define RECV_SIZE 1024
 #define BUF_SIZE  RECV_SIZE + 1
 
+
 #define SERVER_ADDRESS "127.0.0.1"
 #define PORT_NUMBER 9090
 
-#define ROOT "/home/suporte"
+#define BUFFER_SIZE 512
+
+//#define ROOT "/home/suporte"
 
 int init_server(int* listen_fd);
+
+void request_handler(void *new_socket);
 
 
 
