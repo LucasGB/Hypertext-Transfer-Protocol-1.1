@@ -7,24 +7,25 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/stat.h>
+
+
 #include "connect.h"
-#include "url_parser.h"
+#include "parser.h"
+#include "http_request.h"
 
 
 void request_handler(void *new_socket){
+	HTTP_REQUEST req;
+
 	char request_buffer[BUFFER_SIZE];
 
-	int conn_fd = (int*) new_socket;
-
-	printf("%d\n", &conn_fd);
-
 	// Receives request from client
-	if(recv(conn_fd, request_buffer, sizeof(request_buffer), 0) == -1) {
+	if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer), 0) == -1) {
 		fprintf(stderr, "Error to receive request from client --> %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
-	printf("%s\n", request_buffer);
+	parse(request_buffer, &req);
 }
 
 int main(int argc, char* argv[]){

@@ -16,10 +16,10 @@ LDIR = lib
 #LIBS=-lm
 
 # Dependency files
-_DEPS = url_parser.h connect.h
+_DEPS = parser.h connect.h
 DEPS = $(patsubst %,$(LDIR)/%,$(_DEPS))
 
-_OBJ = http.o url_parser.o 
+_OBJ = http.o parser.o 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(CDIR)/%.c $(DEPS)
