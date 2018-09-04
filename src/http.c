@@ -15,7 +15,7 @@
 
 
 void request_handler(void *new_socket){
-	HTTP_REQUEST req;
+	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
 
 	char request_buffer[BUFFER_SIZE];
 
@@ -26,6 +26,12 @@ void request_handler(void *new_socket){
 	}
 
 	parse(request_buffer, &req);
+
+	printf("%s\n", req -> method);
+
+	if(!strcmp(req -> method, "GET")){
+		printf("GET REQUEST\n");
+	}
 }
 
 int main(int argc, char* argv[]){
@@ -74,8 +80,6 @@ int main(int argc, char* argv[]){
 	printf("Started server on %s:%d\n", SERVER_ADDRESS, PORT_NUMBER);
 
 	client = sizeof(client_address);
-
-	
 
 	while(1){
 		// Accepts incoming connections from clients
