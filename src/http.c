@@ -28,12 +28,12 @@ void request_handler(void *new_socket){
 	parse(request_buffer, req);
 
 	if(!strcmp(req -> method, "GET")){
-		char* msg = "oi";
-		send(*(int*) new_socket, msg, strlen(msg), 0);
-
 		printf("200 OK!!!\n");
-		send_new(*(int*) new_socket, "HTTP/1.1 200 OK\r\n");
-		send_new(*(int*) new_socket, "Server : Lucas/Private\r\n\r\n");
+		send_new(*(int*) new_socket, "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!");
+		//send_new(*(int*) new_socket, "Server : Lucas/Private\r\n\r\n");
+
+		//free(request_buffer);
+		close(*(int*) new_socket);
 	}
 }
 
