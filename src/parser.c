@@ -9,6 +9,7 @@
 ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 	printf("%s\n", request_buffer);
 
+	printf("----------------Fim do HEADER -------------\n");
 	char *ret = strstr(request_buffer, "\r\n\r\n");
 
 	if(ret == NULL){
@@ -27,10 +28,5 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		if(strcmp(strtok(NULL, " "), "HTTP/1.1\r")){
 			printf("INCORRECT VERSION.\n");
 		}
-
-		printf("ASNdhiasd\n");
 	}
-
-	printf("Saiu");
-
 }

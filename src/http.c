@@ -20,17 +20,26 @@ void request_handler(void *new_socket){
 	char request_buffer[BUFFER_SIZE];
 
 	// Receives request from client
-	if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer), 0) == -1) {
+	if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer), MSG_PEEK) == -1) {
 		fprintf(stderr, "Error to receive request from client --> %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
-	parse(request_buffer, &req);
-
-	printf("%s\n", req -> method);
+	parse(request_buffer, req);
 
 	if(!strcmp(req -> method, "GET")){
-		printf("GET REQUEST\n");
+		char* msg = "oi";
+		send(*(int*) new_socket, msg, strlen(msg), 0);
+
+		printf("200 OK!!!\n");
+		send_new(*(int*) new_socket, "HTTP/1.1 200 OK\r\n");
+		send_new(*(int*) new_socket, "Server : Lucas/Private\r\n\r\n");
+	}
+}
+
+void send_new(int fd, char *msg) {
+	if(send(fd, msg, strlen(msg), 0) == -1) {
+		printf("Error in send\n");
 	}
 }
 
@@ -45,7 +54,7 @@ int main(int argc, char* argv[]){
 
 	// Client structures
 	struct sockaddr_in client_address;
-	socklen_t client;
+	socklen_t client = sizeof(client_address);
 	char ipAddress[INET_ADDRSTRLEN];
 	
 	// Initializes the server
@@ -79,8 +88,6 @@ int main(int argc, char* argv[]){
 
 	printf("Started server on %s:%d\n", SERVER_ADDRESS, PORT_NUMBER);
 
-	client = sizeof(client_address);
-
 	while(1){
 		// Accepts incoming connections from clients
 		if((conn_fd = accept(listen_fd, (struct sockaddr *) &client_address, &client)) == -1) {
@@ -91,12 +98,17 @@ int main(int argc, char* argv[]){
 
 			pthread_t sniffer_thread;
 			new_socket = malloc (sizeof(int*));
+			printf("%d\n", conn_fd);
 			*new_socket = conn_fd;
 
-			if(pthread_create(&sniffer_thread, NULL, request_handler, (void*) new_socket) < 0){
-				fprintf(stderr, "Could not create thread --> %s", strerror(errno));
-				exit(EXIT_FAILURE);
-			}
+			printf("A: %d\n", *(int*) new_socket);
+
+			request_handler(new_socket);
+
+			//if(pthread_create(&sniffer_thread, NULL, request_handler, (void*) new_socket) < 0){
+			//	fprintf(stderr, "Could not create thread --> %s", strerror(errno));
+			//	exit(EXIT_FAILURE);
+			//}
 		}
 
 	}
