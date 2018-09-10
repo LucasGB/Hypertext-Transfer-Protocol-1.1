@@ -12,7 +12,66 @@
 #include "connect.h"
 #include "parser.h"
 #include "http_request.h"
+#include "dirent.h"
 
+
+char* build_html(char* path){
+
+	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
+
+	int temp_content_length = strlen(temp_content);
+
+	DIR *d;
+	struct dirent *dir;
+
+	char* abs_path = (char*) malloc (sizeof(char) * (strlen(path) + strlen("./root")));
+	strcpy(abs_path, "./root");
+	strcat(abs_path, path);
+
+	d = opendir(abs_path);
+
+	// Dynamically inserts links to directories in the html content
+	if (d) {
+		while ((dir = readdir(d)) != NULL) {
+		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
+		    	sprintf(link, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name);
+
+		    	temp_content_length += strlen(link);
+
+		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
+		    	strcat(temp_content, link);
+	    }
+	    closedir(d);
+	}
+
+	temp_content_length += strlen("</body>\n</html>");
+	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
+	strcat(temp_content, "</body>\n</html>");
+	
+	return temp_content;
+}
+
+void build_response(void *new_socket, char* path){
+	char *html_content = build_html(path);
+	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
+
+	int html_content_length = strlen(html_content);
+
+	// Creates a header string with the size of temp_header length plus the string size of html content length
+	char *header = (char*) malloc (sizeof(char) * (strlen(temp_header) + snprintf(NULL, 0, "%d", html_content_length) + 4));
+	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\r\n\r\n", html_content_length);
+
+	// Creates response  with the necessary size. (header length  + content length)
+	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + html_content_length));
+
+	// Concatenates header and html to response
+	strcpy(resp, header);
+	strcat(resp, html_content);
+
+	send_new(*(int*) new_socket, resp);
+
+	free(header);
+}
 
 void request_handler(void *new_socket){
 	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
@@ -28,11 +87,10 @@ void request_handler(void *new_socket){
 	parse(request_buffer, req);
 
 	if(!strcmp(req -> method, "GET")){
-		printf("200 OK!!!\n");
-		send_new(*(int*) new_socket, "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!");
-		//send_new(*(int*) new_socket, "Server : Lucas/Private\r\n\r\n");
 
-		//free(request_buffer);
+		build_response(new_socket, req -> path);
+
+		free(req);
 		close(*(int*) new_socket);
 	}
 }
@@ -98,10 +156,7 @@ int main(int argc, char* argv[]){
 
 			pthread_t sniffer_thread;
 			new_socket = malloc (sizeof(int*));
-			printf("%d\n", conn_fd);
 			*new_socket = conn_fd;
-
-			printf("A: %d\n", *(int*) new_socket);
 
 			request_handler(new_socket);
 

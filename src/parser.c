@@ -32,6 +32,12 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 
 		// Constructs the HTTP_REQUEST struct
 		req -> method = strdup(strtok(first_line, " "));
+
+	//	char* root = strdup("./root");
+	//	char* aux = strdup(strtok(NULL, " "));
+
+	//	path = (char*) realloc (sizeof(char*) * str)
+
 		req -> path = strdup(strtok(NULL, " "));
 
 		if(strcmp(strtok(NULL, " "), "HTTP/1.1\r")){
