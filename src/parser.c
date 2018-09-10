@@ -33,12 +33,14 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		// Constructs the HTTP_REQUEST struct
 		req -> method = strdup(strtok(first_line, " "));
 
-	//	char* root = strdup("./root");
-	//	char* aux = strdup(strtok(NULL, " "));
+		char* root = strdup("./root");
+		char* aux = strdup(strtok(NULL, " "));		
 
-	//	path = (char*) realloc (sizeof(char*) * str)
+		req -> path = (char*) malloc (sizeof(char) * (strlen(root) + strlen(aux)));
+		strcpy(req -> path, root);
+		strcat(req -> path, aux);
 
-		req -> path = strdup(strtok(NULL, " "));
+		//req -> path = strdup(strtok(NULL, " "));
 
 		if(strcmp(strtok(NULL, " "), "HTTP/1.1\r")){
 			printf("INCORRECT VERSION.\n");

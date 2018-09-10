@@ -24,11 +24,15 @@ char* build_html(char* path){
 	DIR *d;
 	struct dirent *dir;
 
-	char* abs_path = (char*) malloc (sizeof(char) * (strlen(path) + strlen("./root")));
-	strcpy(abs_path, "./root");
-	strcat(abs_path, path);
+	printf("aaaaaaaaaaaaaaaa\n");
+	printf("%s\n", path);
+	//char* abs_path = (char*) malloc (sizeof(char) * (strlen(path) + strlen("./root")));
+	//strcpy(abs_path, "./root");
+	//strcat(abs_path, path);
 
-	d = opendir(abs_path);
+	//d = opendir(abs_path);
+
+	d = opendir(path);
 
 	// Dynamically inserts links to directories in the html content
 	if (d) {
@@ -36,6 +40,7 @@ char* build_html(char* path){
 		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
 		    	sprintf(link, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name);
 
+		    	printf("%s\n", link);
 		    	temp_content_length += strlen(link);
 
 		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
@@ -52,6 +57,7 @@ char* build_html(char* path){
 }
 
 void build_response(void *new_socket, char* path){
+	printf("%s\n", path);
 	char *html_content = build_html(path);
 	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
 
@@ -92,6 +98,8 @@ void request_handler(void *new_socket){
 
 		free(req);
 		close(*(int*) new_socket);
+
+		printf("Socket closed.\n");
 	}
 }
 
@@ -154,7 +162,7 @@ int main(int argc, char* argv[]){
 		} else {
 			printf("Client connected.\n");
 
-			pthread_t sniffer_thread;
+			//pthread_t sniffer_thread;
 			new_socket = malloc (sizeof(int*));
 			*new_socket = conn_fd;
 
