@@ -34,13 +34,15 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		req -> method = strdup(strtok(first_line, " "));
 
 		char* root = strdup("./root");
-		char* aux = strdup(strtok(NULL, " "));		
+		char* aux = strdup(strtok(NULL, " "));
 
 		printf("AUX: %s\n", aux);
 
 		req -> path = (char*) malloc (sizeof(char) * (strlen(root) + strlen(aux)));
 		strcpy(req -> path, root);
 		strcat(req -> path, aux);
+
+		printf("PATH: %s\n", req -> path);
 
 		//req -> path = strdup(strtok(NULL, " "));
 

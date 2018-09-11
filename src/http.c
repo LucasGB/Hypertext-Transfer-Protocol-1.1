@@ -15,7 +15,7 @@
 #include "dirent.h"
 
 
-char* build_html(char* path){
+char* build_html(char* path) {
 
 	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
 
@@ -24,21 +24,16 @@ char* build_html(char* path){
 	DIR *d;
 	struct dirent *dir;
 
-	printf("aaaaaaaaaaaaaaaa\n");
-	printf("%s\n", path);
-	//char* abs_path = (char*) malloc (sizeof(char) * (strlen(path) + strlen("./root")));
-	//strcpy(abs_path, "./root");
-	//strcat(abs_path, path);
-
-	//d = opendir(abs_path);
-
 	d = opendir(path);
+
+	// Walks the cursor up to 7 bytes to remove "./root/" from path pointer
+	path += 7;
 
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
-		    	sprintf(link, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name);
+		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
 		    	printf("%s\n", link);
 		    	temp_content_length += strlen(link);
@@ -56,7 +51,7 @@ char* build_html(char* path){
 	return temp_content;
 }
 
-void build_response(void *new_socket, char* path){
+void build_response(void *new_socket, char* path) {
 	printf("%s\n", path);
 	char *html_content = build_html(path);
 	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
@@ -79,7 +74,7 @@ void build_response(void *new_socket, char* path){
 	free(header);
 }
 
-void request_handler(void *new_socket){
+void request_handler(void *new_socket) {
 	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
 
 	char request_buffer[BUFFER_SIZE];
@@ -109,10 +104,9 @@ void send_new(int fd, char *msg) {
 	}
 }
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]) {
 
-//	char request_buffer[BUFFER_SIZE];
-
+	//	char request_buffer[BUFFER_SIZE];
 	int *new_socket;
 
 	// Socket file descriptors
