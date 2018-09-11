@@ -41,11 +41,7 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		req -> path = (char*) malloc (sizeof(char) * (strlen(root) + strlen(aux)));
 		strcpy(req -> path, root);
 		strcat(req -> path, aux);
-
-		printf("PATH: %s\n", req -> path);
-
-		//req -> path = strdup(strtok(NULL, " "));
-
+		
 		if(strcmp(strtok(NULL, " "), "HTTP/1.1\r")){
 			printf("INCORRECT VERSION.\n");
 		}

@@ -8,7 +8,6 @@
 #include <pthread.h>
 #include <sys/stat.h>
 
-
 #include "connect.h"
 #include "parser.h"
 #include "http_request.h"
@@ -26,13 +25,17 @@ char* build_html(char* path) {
 
 	d = opendir(path);
 
+	printf("PATH: %s\n", path);
+
 	// Walks the cursor up to 7 bytes to remove "./root/" from path pointer
 	path += 7;
 
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
-		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
+				printf("NEXT: %s\n", dir -> d_name);
+		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name) + 1];
+		    	printf("LEN: %d\n", sizeof(link));
 		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
 		    	printf("%s\n", link);
@@ -40,6 +43,8 @@ char* build_html(char* path) {
 
 		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
 		    	strcat(temp_content, link);
+		    	printf("NEXT DO NEXT\n");
+
 	    }
 	    closedir(d);
 	}
