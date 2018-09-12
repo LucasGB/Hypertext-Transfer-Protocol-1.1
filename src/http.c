@@ -34,16 +34,20 @@ char* build_html(char* path) {
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 				printf("NEXT: %s\n", dir -> d_name);
-		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name) + 1];
+		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
 		    	printf("LEN: %d\n", sizeof(link));
 		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
 		    	printf("%s\n", link);
+		    	printf("B4 TEMP LENGTH: %d\n", strlen(link));
 		    	temp_content_length += strlen(link);
 
+		    	printf("TEMP LENGTH: %d\n", temp_content_length);
+
 		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
+		    	printf("REALLOC SUCCESSFULL\n");;
 		    	strcat(temp_content, link);
-		    	printf("NEXT DO NEXT\n");
+		    	printf("NEXT DO NEXT\n\n");
 
 	    }
 	    closedir(d);
@@ -77,6 +81,7 @@ void build_response(void *new_socket, char* path) {
 	send_new(*(int*) new_socket, resp);
 
 	free(header);
+	free(resp);
 }
 
 void request_handler(void *new_socket) {
