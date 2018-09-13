@@ -7,11 +7,16 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "connect.h"
 #include "parser.h"
 #include "http_request.h"
 #include "dirent.h"
+
+#define BUFSIZ 256
 
 typedef struct {
     const char *extension;
@@ -116,10 +121,15 @@ void render_directory(void *new_socket, char* path) {
 	free(resp);
 }
 
+
 void request_handler(void *new_socket) {
 	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
 	int fd;
-
+	int sent_bytes = 0;
+	char file_size[256];
+	int remain_data;
+	int offset;
+	ssize_t len;
 	char request_buffer[BUFFER_SIZE];
 
 	// Receives request from client
@@ -136,11 +146,35 @@ void request_handler(void *new_socket) {
 
 		if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
 			send_new(*(int*) new_socket, "404");
-			printf("404\n");
+			
+            fprintf(stderr, "Error opening file --> %s", strerror(errno));
+
+            exit(EXIT_FAILURE);
 		} else {
 			fstat(fd, &statbuf);
 			if(S_ISREG(statbuf.st_mode)){
 				//send_file(*(int*) new_socket, fd, &. statbuf.st_size);
+				sprintf(file_size, "%d", statbuf.st_size);
+
+		        /* Sending file size */
+		        len = send(*(int*) new_socket, file_size, sizeof(file_size), 0);
+		        if (len < 0) {
+		              fprintf(stderr, "Error on sending greetings --> %s", strerror(errno));
+		              exit(EXIT_FAILURE);
+		        }
+
+		        fprintf(stdout, "Server sent %d bytes for the size\n", len);
+
+		        offset = 0;
+		        remain_data = statbuf.st_size;
+		        /* Sending file data */
+		        while (((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0)) {
+		                fprintf(stdout, "1. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+		                remain_data -= sent_bytes;
+		                fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+		        }
+
+
 			} else if(S_ISDIR(statbuf.st_mode)){
 				render_directory(new_socket, req -> path);
 			}
