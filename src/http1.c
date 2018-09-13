@@ -13,48 +13,17 @@
 #include "http_request.h"
 #include "dirent.h"
 
-typedef struct {
-    const char *extension;
-    const char *mime_type;
-} mime_map;
-
-mime_map meme_types [] = {
-    {".css", "text/css"},
-    {".gif", "image/gif"},
-    {".htm", "text/html"},
-    {".html", "text/html"},
-    {".jpeg", "image/jpeg"},
-    {".jpg", "image/jpeg"},
-    {".ico", "image/x-icon"},
-    {".js", "application/javascript"},
-    {".pdf", "application/pdf"},
-    {".mp4", "video/mp4"},
-    {".png", "image/png"},
-    {".svg", "image/svg+xml"},
-    {".xml", "text/xml"},
-    {NULL, NULL},
-};
-
-char *default_mime_type = "text/plain";
-
-static const char* get_mime_type(char *filename){
-    char *dot = strrchr(filename, '.');
-    if(dot){ // strrchar Locate last occurrence of character in string
-        mime_map *map = meme_types;
-        while(map->extension){
-            if(strcmp(map->extension, dot) == 0){
-                return map->mime_type;
-            }
-            map++;
-        }
-    }
-    return default_mime_type;
-}
 
 char* build_html(char* path) {
 
-	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
+	char* html_version = strdup("<!DOCTYPE html>\n<html>\n");
+	char* head_element = strdup("<head>\n<title>HTTP Server</title>\n</head>\n");
+	char* body_element = NULL;
+	int body_element_length = 0;
 	char* footer_element = strdup("</body>\n</html>");
+
+	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
+	char* content;
 	int temp_content_length = strlen(temp_content);
 
 	DIR *d;
@@ -68,32 +37,51 @@ char* build_html(char* path) {
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
-			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
-				continue;
-			}
 		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
 
 		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
-		    	temp_content_length += strlen(link);
+		    	printf("Link: %s\n", link);
 
-		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-		    	strncat(temp_content, link, strlen(link));
+		    	body_element_length += strlen(link);
 
-		}
+		    	char* temp_body = NULL;
+
+		    	if(body_element) temp_body = strdup(body_element);
+
+		    	free(body_element);
 		    	
+		    	body_element = (char*) malloc (sizeof(body_element_length));
+
+		    	if(temp_body){
+		    		snprintf(body_element, "%s%s", temp_body, link);
+		    	} else {
+		    		snprintf(body_element, "%s", link);
+		    	}
+		    	printf("Body Link: %s\n", body_element);
+	    }
 	    closedir(d);
 	}
 
-	temp_content_length += strlen("</body>\n</html>");
-	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
-	strncat(temp_content, footer_element, strlen(footer_element));
+	//temp_content_length += strlen("</body>\n</html>");
+	//temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
+	//strcat(temp_content, "</body>\n</html>");
+	//snprintf(temp_content, sizeof(temp_content), "%s</body>\n</html>", temp_content);
+	//strncat(temp_content, "</body>\n</html>", temp_content_length);
 
-	return temp_content;
+	//printf("%s\n", temp_content);
+	int html_content_length = (strlen(html_version) + strlen(head_element) + strlen(body_element) + strlen(footer_element));
+
+	char* html_content = (char*) malloc (sizeof(char) * html_content_length);
+	
+	snprintf(html_content, html_content_length, "%s\n%s%s%s", html_version, head_element, body_element, footer_element);
+
+	printf("HTML: %s\n", html_content);
+	
+	return html_content;
 }
 
-void render_directory(void *new_socket, char* path) {
-
+void build_response(void *new_socket, char* path) {
 	char *html_content = build_html(path);
 	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
 
@@ -118,7 +106,6 @@ void render_directory(void *new_socket, char* path) {
 
 void request_handler(void *new_socket) {
 	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
-	int fd;
 
 	char request_buffer[BUFFER_SIZE];
 
@@ -132,22 +119,12 @@ void request_handler(void *new_socket) {
 
 	if(!strcmp(req -> method, "GET")){
 
-		struct stat statbuf;
-
-		if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
-			send_new(*(int*) new_socket, "404");
-			printf("404\n");
-		} else {
-			fstat(fd, &statbuf);
-			if(S_ISREG(statbuf.st_mode)){
-				//send_file(*(int*) new_socket, fd, &. statbuf.st_size);
-			} else if(S_ISDIR(statbuf.st_mode)){
-				render_directory(new_socket, req -> path);
-			}
-		}
+		build_response(new_socket, req -> path);
 
 		free(req);
 		close(*(int*) new_socket);
+
+		printf("Socket closed.\n");
 	}
 }
 
