@@ -121,6 +121,29 @@ void render_directory(void *new_socket, char* path) {
 	free(resp);
 }
 
+void serve_file(void *new_socket, char* path){
+	char *file_type = get_mime_type(path);
+	char *header = (char*) malloc (sizeof(char) * (strlen("HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ") + snprintf(NULL, 0, "%d", strlen(file_type)) + 4));
+	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: %s\nTransfer-Enconding: chunked\r\n\r\n", file_type);
+
+
+	off_t offset = 0;
+	int remain_data = 0;
+	int sent_bytes = 0;
+
+	struct stat file_stat;
+	int fd = open(path, O_RDONLY);
+	fstat(fd, &file_stat);
+
+    remain_data = file_stat.st_size;
+    /* Sending file data */
+    send_new(*(int*) new_socket, header);
+
+    while (((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && (remain_data > 0)) {
+                remain_data -= sent_bytes;
+                fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+        }
+}
 
 void request_handler(void *new_socket) {
 	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
@@ -128,7 +151,7 @@ void request_handler(void *new_socket) {
 	int sent_bytes = 0;
 	char file_size[256];
 	int remain_data;
-	int offset;
+	int* offset;
 	ssize_t len;
 	char request_buffer[BUFFER_SIZE];
 
@@ -153,26 +176,10 @@ void request_handler(void *new_socket) {
 		} else {
 			fstat(fd, &statbuf);
 			if(S_ISREG(statbuf.st_mode)){
-				//send_file(*(int*) new_socket, fd, &. statbuf.st_size);
-				sprintf(file_size, "%d", statbuf.st_size);
+				printf("Is a regular file.\n");
 
-		        /* Sending file size */
-		        len = send(*(int*) new_socket, file_size, sizeof(file_size), 0);
-		        if (len < 0) {
-		              fprintf(stderr, "Error on sending greetings --> %s", strerror(errno));
-		              exit(EXIT_FAILURE);
-		        }
-
-		        fprintf(stdout, "Server sent %d bytes for the size\n", len);
-
-		        offset = 0;
-		        remain_data = statbuf.st_size;
-		        /* Sending file data */
-		        while (((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0)) {
-		                fprintf(stdout, "1. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-		                remain_data -= sent_bytes;
-		                fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-		        }
+				serve_file(new_socket, req -> path);
+				
 
 
 			} else if(S_ISDIR(statbuf.st_mode)){
