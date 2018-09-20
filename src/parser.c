@@ -7,8 +7,8 @@
 
 
 ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
-	printf("%s\n", request_buffer);
-
+	printf("---------------- Inicio do HEADER -------------\n");
+	printf("%s", request_buffer);
 	printf("---------------- Fim do HEADER -------------\n");
 
 	// Search for CRLF in request buffer
@@ -28,21 +28,37 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		char *first_line = (char*) malloc (first_line_length * sizeof(char));
 
 		// Copies the first line from the request buffer to the char pointer
-		memcpy(first_line, request_buffer, first_line_length);
+		//memcpy(first_line, request_buffer, first_line_length);
+		snprintf(first_line, first_line_length, "%s", request_buffer);
+		printf("%s\n", first_line);
+		printf("%d\n", first_line_length);
+
 
 		// Constructs the HTTP_REQUEST struct
 		req -> method = strdup(strtok(first_line, " "));
 
-		char* root = strdup("./root");
+
 		char* aux = strdup(strtok(NULL, " "));
 
-		req -> path = (char*) malloc (sizeof(char) * (strlen(root) + strlen(aux)));
-		strcpy(req -> path, root);
-		strcat(req -> path, aux);
+		req -> path = (char*) malloc (sizeof(char) * (strlen("./root") + strlen(aux)) + 1);
+		snprintf(req -> path, strlen(aux) + strlen("./root") + 1, "./root%s", aux);
+
+		char* version = strdup(strtok(NULL, " "));
 		
-		if(strcmp(strtok(NULL, " "), "HTTP/1.1\r")){
+		//printf("Method: %s\n", req -> method);
+		//printf("Path: %s\n", req -> path);
+		//printf("Version: %s\n", version);
+		//printf("First line: %d\n", strlen(first_line));
+		
+
+		
+		
+		if(strcmp(version, "HTTP/1.1")){
 			printf("INCORRECT VERSION.\n");
 		}
+
+		free(first_line);
+		free(aux);
 	}
 
 

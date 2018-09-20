@@ -76,9 +76,11 @@ char* build_html(char* path) {
 			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
 				continue;
 			}
-		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
+		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s/</a>\n", dir -> d_name, dir -> d_name)];
 
 		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+
+		    	printf("Link: %s\n", link);
 
 		    	temp_content_length += strlen(link);
 
@@ -99,26 +101,77 @@ char* build_html(char* path) {
 
 void render_directory(void *new_socket, char* path) {
 
-	char *html_content = build_html(path);
+	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
+	char* footer_element = strdup("</body>\n</html>");
+	int temp_content_length = strlen(temp_content);
+
+	DIR *d;
+	struct dirent *dir;
+
+	d = opendir(path);
+
+	// Walks the cursor up to 7 bytes to remove "./root/" from path pointer
+	path += 7;
+
+	// Dynamically inserts links to directories in the html content
+	if (d) {
+		while ((dir = readdir(d)) != NULL) {
+			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
+				continue;
+			}
+
+		    	char link[snprintf(NULL, 0, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
+				printf("create link buf\n");
+		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+
+		    	printf("Link: %s\n", link);
+
+		    	temp_content_length += strlen(link);
+
+		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+		    	printf("realloc\n");
+		    	strncat(temp_content, link, strlen(link));
+		    	printf("cat\n");
+
+		}
+		    	
+	    closedir(d);
+	}
+
+	temp_content_length += strlen("</body>\n</html>");
+	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+	strncat(temp_content, footer_element, strlen(footer_element));
+
+
+
+
+
+
 	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
 
-	int html_content_length = strlen(html_content);
+	int html_content_length = strlen(temp_content);
 
 	// Creates a header string with the size of temp_header length plus the string size of html content length
 	char *header = (char*) malloc (sizeof(char) * (strlen(temp_header) + snprintf(NULL, 0, "%d", html_content_length) + 4));
 	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\r\n\r\n", html_content_length);
 
 	// Creates response  with the necessary size. (header length  + content length)
-	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + html_content_length));
+	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + html_content_length) + 1);
 
 	// Concatenates header and html to response
 	strcpy(resp, header);
-	strcat(resp, html_content);
+	strcat(resp, temp_content);
 
 	send_new(*(int*) new_socket, resp);
 
+	printf("TEST\n");
+
 	free(header);
+	free(temp_content);
+	free(footer_element);
 	free(resp);
+
+	printf("TEST2\n");
 }
 
 void serve_file(void *new_socket, char* path){
@@ -146,14 +199,13 @@ void serve_file(void *new_socket, char* path){
 }
 
 void request_handler(void *new_socket) {
-	HTTP_REQUEST* req = malloc (sizeof(HTTP_REQUEST));
+	HTTP_REQUEST* req = (HTTP_REQUEST*) malloc (sizeof(HTTP_REQUEST));
 	int fd;
 	int sent_bytes = 0;
-	char file_size[256];
 	int remain_data;
 	int* offset;
 	ssize_t len;
-	char request_buffer[BUFFER_SIZE];
+	char request_buffer[1024];
 
 	// Receives request from client
 	if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer), MSG_PEEK) == -1) {
@@ -180,14 +232,13 @@ void request_handler(void *new_socket) {
 
 				serve_file(new_socket, req -> path);
 				
-
-
 			} else if(S_ISDIR(statbuf.st_mode)){
 				render_directory(new_socket, req -> path);
 			}
 		}
 
 		free(req);
+
 		close(*(int*) new_socket);
 	}
 }
@@ -248,8 +299,6 @@ int main(int argc, char* argv[]) {
 			fprintf(stderr, "Error on accept --> %s", strerror(errno));
 			exit(EXIT_FAILURE);
 		} else {
-			printf("Client connected.\n");
-
 			//pthread_t sniffer_thread;
 			new_socket = malloc (sizeof(int*));
 			*new_socket = conn_fd;

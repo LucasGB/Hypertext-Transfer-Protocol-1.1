@@ -14,13 +14,11 @@
 //#include <buffer.h>
 
 #define RECV_SIZE 1024
-#define BUF_SIZE  RECV_SIZE + 1
+#define BUFFER_SIZE  RECV_SIZE + 1
 
 
 #define SERVER_ADDRESS "127.0.0.1"
 #define PORT_NUMBER 9090
-
-#define BUFFER_SIZE 512
 
 //#define ROOT "/home/suporte"
 
