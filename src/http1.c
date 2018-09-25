@@ -37,11 +37,12 @@ char* build_html(char* path) {
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
-		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s</a>\n", dir -> d_name, dir -> d_name)];
+		    	char link[snprintf(NULL, 0, "<a href=\"/%s/\">%s</a>\n", dir -> d_name, dir -> d_name)];
 
-		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+		    	sprintf(link, "<a href=\"%s/%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
 		    	printf("Link: %s\n", link);
+		    	printf("JHSAbduyhabdisbiab\n");
 
 		    	body_element_length += strlen(link);
 

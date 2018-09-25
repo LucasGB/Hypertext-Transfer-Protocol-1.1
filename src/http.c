@@ -110,28 +110,68 @@ void render_directory(void *new_socket, char* path) {
 
 	d = opendir(path);
 
-	printf("antes %p\n", path);
-	// Walks the cursor up to 7 bytes to remove "./root/" from path pointer
+	char* abs_path = strdup(path);
+
+	// Walks the cursor up to 6 bytes to remove "./root" from path pointer
 	path += 6;
-	printf("Depois %p\n", path);
 
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
 				continue;
-			}	
+			}
 
-		    char link[snprintf(NULL, 0, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
-		    sprintf(link, "<a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+			int dir_element_length = strlen(abs_path) + strlen(dir -> d_name) + 1;
+			char* dir_element = (char*) malloc (sizeof(char) * dir_element_length);
+			snprintf(dir_element, dir_element_length, "%s%s", abs_path, dir -> d_name);
 
-		    printf("Link: %s\n", link);
+			struct stat statbuf;
+			int fd = open(dir_element, O_RDONLY);
+			printf("Opening %s\n", dir_element);
+			fstat(fd, &statbuf);
 
-		    temp_content_length += strlen(link);
-	    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-	    	strncat(temp_content, link, strlen(link));
 
-	    	printf("PATH:%s\n", path);
+
+
+			
+
+
+
+
+
+			if(S_ISDIR(statbuf.st_mode)){
+				printf("DIR\n");
+				char link[snprintf(NULL, 0, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
+		    	sprintf(link, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+
+		    	printf("Link: %s\n", link);
+
+			    temp_content_length += strlen(link);
+		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+		    	strncat(temp_content, link, strlen(link));
+
+		    	printf("PATH:%s\n", path);
+			} else {
+				printf("REGULAR FILE\n");
+				char link[snprintf(NULL, 0, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
+		    	sprintf(link, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+
+		    	printf("Link: %s\n", link);
+
+		    	temp_content_length += strlen(link);
+	    		temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+	    		strncat(temp_content, link, strlen(link));
+
+	    		printf("PATH:%s\n", path);
+			}
+		    //printf("Link: %s\n", link);
+
+		   // temp_content_length += strlen(link);
+	    	//temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+	    	//strncat(temp_content, link, strlen(link));
+
+	    	//printf("PATH:%s\n", path);
 		}
 		    	
 	    closedir(d);
