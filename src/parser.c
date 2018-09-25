@@ -30,13 +30,9 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		// Copies the first line from the request buffer to the char pointer
 		//memcpy(first_line, request_buffer, first_line_length);
 		snprintf(first_line, first_line_length, "%s", request_buffer);
-		printf("%s\n", first_line);
-		printf("%d\n", first_line_length);
-
 
 		// Constructs the HTTP_REQUEST struct
 		req -> method = strdup(strtok(first_line, " "));
-
 
 		char* aux = strdup(strtok(NULL, " "));
 
@@ -46,13 +42,10 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		char* version = strdup(strtok(NULL, " "));
 		
 		//printf("Method: %s\n", req -> method);
-		//printf("Path: %s\n", req -> path);
+		printf("PARSER Path: %s\n", req -> path);
 		//printf("Version: %s\n", version);
 		//printf("First line: %d\n", strlen(first_line));
-		
-
-		
-		
+				
 		if(strcmp(version, "HTTP/1.1")){
 			printf("INCORRECT VERSION.\n");
 		}

@@ -110,29 +110,28 @@ void render_directory(void *new_socket, char* path) {
 
 	d = opendir(path);
 
+	printf("antes %p\n", path);
 	// Walks the cursor up to 7 bytes to remove "./root/" from path pointer
-	path += 7;
+	path += 6;
+	printf("Depois %p\n", path);
 
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
 				continue;
-			}
+			}	
 
-		    	char link[snprintf(NULL, 0, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
-				printf("create link buf\n");
-		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+		    char link[snprintf(NULL, 0, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
+		    sprintf(link, "<a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
-		    	printf("Link: %s\n", link);
+		    printf("Link: %s\n", link);
 
-		    	temp_content_length += strlen(link);
+		    temp_content_length += strlen(link);
+	    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+	    	strncat(temp_content, link, strlen(link));
 
-		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-		    	printf("realloc\n");
-		    	strncat(temp_content, link, strlen(link));
-		    	printf("cat\n");
-
+	    	printf("PATH:%s\n", path);
 		}
 		    	
 	    closedir(d);
@@ -164,14 +163,10 @@ void render_directory(void *new_socket, char* path) {
 
 	send_new(*(int*) new_socket, resp);
 
-	printf("TEST\n");
-
 	free(header);
 	free(temp_content);
 	free(footer_element);
 	free(resp);
-
-	printf("TEST2\n");
 }
 
 void serve_file(void *new_socket, char* path){
