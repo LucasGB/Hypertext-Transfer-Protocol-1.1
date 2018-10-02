@@ -292,11 +292,9 @@ void request_handler(void *new_socket) {
 		struct stat statbuf;
 
 		if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
-			error_404(new_socket);
-			
+			error_404(new_socket);	
             fprintf(stderr, "Error opening file --> %s", strerror(errno));
 
-            exit(EXIT_FAILURE);
 		} else {
 			fstat(fd, &statbuf);
 			if(S_ISREG(statbuf.st_mode)){
