@@ -6,6 +6,6 @@ typedef struct {
 	char* path;
 	off_t offset;
 	size_t end;
-}HTTP_REQUEST; 
+} HTTP_REQUEST; 
 
 #endif

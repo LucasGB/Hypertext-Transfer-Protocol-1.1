@@ -10,7 +10,7 @@
 #include <sys/sendfile.h>
 #include <fcntl.h>
 #include <errno.h>
-
+#include <netinet/tcp.h>
 #include "connect.h"
 #include "parser.h"
 #include "http_request.h"
@@ -54,6 +54,14 @@ static const char* get_mime_type(char *filename){
         }
     }
     return default_mime_type;
+}
+
+size_t get_file_size(const char* filename) {
+    struct stat st;
+    if(stat(filename, &st) != 0) {
+        return 0;
+    }
+    return st.st_size;   
 }
 
 char* build_html(char* path) {
@@ -131,15 +139,6 @@ void render_directory(void *new_socket, char* path) {
 			printf("Opening %s\n", dir_element);
 			fstat(fd, &statbuf);
 
-
-
-
-			
-
-
-
-
-
 			if(S_ISDIR(statbuf.st_mode)){
 				printf("DIR\n");
 				char link[snprintf(NULL, 0, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
@@ -181,11 +180,6 @@ void render_directory(void *new_socket, char* path) {
 	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 	strncat(temp_content, footer_element, strlen(footer_element));
 
-
-
-
-
-
 	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
 
 	int html_content_length = strlen(temp_content);
@@ -211,6 +205,37 @@ void render_directory(void *new_socket, char* path) {
 
 void serve_file(void *new_socket, char* path){
 	char *file_type = get_mime_type(path);
+	int file_size = get_file_size(path);
+
+	int header_size = strlen(file_type) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+
+	char *header = (char*) malloc (sizeof(char) * header_size);
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\r\n\r\n", file_type, file_size);
+
+	send_new(*(int*) new_socket, header);
+
+	int remain_data = file_size;
+	int sent_bytes = 0;
+	off_t offset = 0;
+	int fd = open(path, O_RDONLY);
+
+	// Force flush socket stream
+	while(((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && remain_data > 0){
+		int flag = 1; 
+		setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+		remain_data -= sent_bytes;
+		flag = 0; 
+		setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+	}
+
+	close(fd);
+	free(header);
+}
+
+void serve_chunked_file(void *new_socket, char* path){
+	char *file_type = get_mime_type(path);
+
+	// READ THIS LINE AGAIN, SLOWLY, AND FIX IT
 	char *header = (char*) malloc (sizeof(char) * (strlen("HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ") + snprintf(NULL, 0, "%d", strlen(file_type)) + 4));
 	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: %s\nTransfer-Enconding: chunked\r\n\r\n", file_type);
 
@@ -227,10 +252,22 @@ void serve_file(void *new_socket, char* path){
     /* Sending file data */
     send_new(*(int*) new_socket, header);
 
-    while (((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && (remain_data > 0)) {
+    //while (((sent_bytes = sendbigfile(*(int*) new_socket, fd, &offset, 256)) > 0) && (remain_data > 0)) {
+    //            remain_data -= sent_bytes;
+  //              fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+//        }
+
+        while (((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && (remain_data > 0)) {
                 remain_data -= sent_bytes;
                 fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
         }
+        int chunk_size = snprintf(NULL, 0, "0\r\n");
+            char chunk[chunk_size];
+            sprintf(chunk, "0\r\n");
+            int b = write(*(int*) new_socket, chunk, strlen(chunk));
+            printf("HEAD: %d\n", b);
+
+    //sendbigfile(*(int*) new_socket, fd, &offset, 256);
 }
 
 void request_handler(void *new_socket) {
@@ -313,7 +350,15 @@ int main(int argc, char* argv[]) {
 
 	server_address.sin_family = AF_INET;
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_address.sin_port = htons(PORT_NUMBER);
+
+	int port;
+	if(argc == 2){
+		port = atoi(argv[1]);
+		server_address.sin_port = htons(argv[1]);
+	} else {
+		port = PORT_NUMBER;
+		server_address.sin_port = htons(PORT_NUMBER);
+	}
 
 	if(bind(listen_fd, (struct sockaddr *) &server_address, sizeof(server_address)) == -1) {
 		fprintf(stderr, "Error on bind --> %s\n", strerror(errno));
@@ -326,7 +371,7 @@ int main(int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Started server on %s:%d\n", SERVER_ADDRESS, PORT_NUMBER);
+	printf("Started server on %s:%d\n", SERVER_ADDRESS, port);
 
 	while(1){
 		// Accepts incoming connections from clients
