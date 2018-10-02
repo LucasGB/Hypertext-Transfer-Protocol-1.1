@@ -11,9 +11,11 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <netinet/tcp.h>
+
 #include "connect.h"
 #include "parser.h"
 #include "http_request.h"
+#include "errors.h"
 #include "dirent.h"
 
 #define BUFSIZ 256
@@ -266,8 +268,6 @@ void serve_chunked_file(void *new_socket, char* path){
             sprintf(chunk, "0\r\n");
             int b = write(*(int*) new_socket, chunk, strlen(chunk));
             printf("HEAD: %d\n", b);
-
-    //sendbigfile(*(int*) new_socket, fd, &offset, 256);
 }
 
 void request_handler(void *new_socket) {
@@ -292,7 +292,7 @@ void request_handler(void *new_socket) {
 		struct stat statbuf;
 
 		if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
-			send_new(*(int*) new_socket, "404");
+			error_404(new_socket);
 			
             fprintf(stderr, "Error opening file --> %s", strerror(errno));
 
