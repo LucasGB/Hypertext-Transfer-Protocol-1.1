@@ -44,22 +44,16 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		char* cookie = strstr(request_buffer, "Cookie");
 		if(cookie == NULL){
 			printf("NO COOKIE\n");
-			req -> cookie = strdup("Set-Cookie: cookie-count=1");
+			req -> cookie = strdup("Set-Cookie: cookie-count=1; Path=/;\n");
 		} else {
-			printf("OLD COOKIE: %s\n", cookie);
 			strtok(cookie, "=");
 
 			int cookie_count = atoi(strdup(strtok(NULL, "="))) + 1;
 
-			free(req -> cookie);
-
-			int cookie_header_size = snprintf(NULL, 0, "Cookie: cookie-count=%d\n", cookie_count) + 1;
+			int cookie_header_size = snprintf(NULL, 0, "Set-Cookie: cookie-count=%d; Path=/;\n", cookie_count) + 1;
 
 			req -> cookie = (char*) malloc (sizeof(char) * cookie_header_size);
-			snprintf(req -> cookie, cookie_header_size, "Cookie: cookie-count=%d\n", cookie_count);
-
-			printf("NEW COOKIE: %s\n", req -> cookie);
-
+			snprintf(req -> cookie, cookie_header_size, "Set-Cookie: cookie-count=%d; Path=/;\n", cookie_count);
 		}
 						
 		if(strcmp(version, "HTTP/1.1")){
