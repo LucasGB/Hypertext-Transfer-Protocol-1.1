@@ -40,12 +40,28 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		snprintf(req -> path, strlen(aux) + strlen("./root") + 1, "./root%s", aux);
 
 		char* version = strdup(strtok(NULL, " "));
-		
-		//printf("Method: %s\n", req -> method);
-		printf("PARSER Path: %s\n", req -> path);
-		//printf("Version: %s\n", version);
-		//printf("First line: %d\n", strlen(first_line));
-				
+
+		char* cookie = strstr(request_buffer, "Cookie");
+		if(cookie == NULL){
+			printf("NO COOKIE\n");
+			req -> cookie = strdup("Set-Cookie: cookie-count=1");
+		} else {
+			printf("OLD COOKIE: %s\n", cookie);
+			strtok(cookie, "=");
+
+			int cookie_count = atoi(strdup(strtok(NULL, "="))) + 1;
+
+			free(req -> cookie);
+
+			int cookie_header_size = snprintf(NULL, 0, "Cookie: cookie-count=%d\n", cookie_count) + 1;
+
+			req -> cookie = (char*) malloc (sizeof(char) * cookie_header_size);
+			snprintf(req -> cookie, cookie_header_size, "Cookie: cookie-count=%d\n", cookie_count);
+
+			printf("NEW COOKIE: %s\n", req -> cookie);
+
+		}
+						
 		if(strcmp(version, "HTTP/1.1")){
 			printf("INCORRECT VERSION.\n");
 		}
@@ -53,7 +69,5 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		free(first_line);
 		free(aux);
 	}
-
-
 
 }

@@ -66,7 +66,7 @@ size_t get_file_size(const char* filename) {
     return st.st_size;   
 }
 
-char* build_html(char* path) {
+void render_directory(void *new_socket, HTTP_REQUEST *req) {
 
 	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
 	char* footer_element = strdup("</body>\n</html>");
@@ -75,55 +75,14 @@ char* build_html(char* path) {
 	DIR *d;
 	struct dirent *dir;
 
-	d = opendir(path);
+	d = opendir(req -> path);
 
-	// Walks the cursor up to 7 bytes to remove "./root/" from path pointer
-	path += 7;
-
-	// Dynamically inserts links to directories in the html content
-	if (d) {
-		while ((dir = readdir(d)) != NULL) {
-			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
-				continue;
-			}
-		    	char link[snprintf(NULL, 0, "<a href=\"/%s\">%s/</a>\n", dir -> d_name, dir -> d_name)];
-
-		    	sprintf(link, "<a href=\"%s/%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
-
-		    	printf("Link: %s\n", link);
-
-		    	temp_content_length += strlen(link);
-
-		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-		    	strncat(temp_content, link, strlen(link));
-
-		}
-		    	
-	    closedir(d);
-	}
-
-	temp_content_length += strlen("</body>\n</html>");
-	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length);
-	strncat(temp_content, footer_element, strlen(footer_element));
-
-	return temp_content;
-}
-
-void render_directory(void *new_socket, char* path) {
-
-	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
-	char* footer_element = strdup("</body>\n</html>");
-	int temp_content_length = strlen(temp_content);
-
-	DIR *d;
-	struct dirent *dir;
-
-	d = opendir(path);
-
-	char* abs_path = strdup(path);
+	char* abs_path = strdup(req -> path);
 
 	// Walks the cursor up to 6 bytes to remove "./root" from path pointer
+	char* path = strdup(req -> path);
 	path += 6;
+
 
 	// Dynamically inserts links to directories in the html content
 	if (d) {
@@ -138,33 +97,22 @@ void render_directory(void *new_socket, char* path) {
 
 			struct stat statbuf;
 			int fd = open(dir_element, O_RDONLY);
-			printf("Opening %s\n", dir_element);
 			fstat(fd, &statbuf);
 
 			if(S_ISDIR(statbuf.st_mode)){
-				printf("DIR\n");
 				char link[snprintf(NULL, 0, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
 		    	sprintf(link, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name);
-
-		    	printf("Link: %s\n", link);
 
 			    temp_content_length += strlen(link);
 		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 		    	strncat(temp_content, link, strlen(link));
-
-		    	printf("PATH:%s\n", path);
 			} else {
-				printf("REGULAR FILE\n");
 				char link[snprintf(NULL, 0, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
 		    	sprintf(link, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
-
-		    	printf("Link: %s\n", link);
 
 		    	temp_content_length += strlen(link);
 	    		temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 	    		strncat(temp_content, link, strlen(link));
-
-	    		printf("PATH:%s\n", path);
 			}
 		    //printf("Link: %s\n", link);
 
@@ -183,12 +131,12 @@ void render_directory(void *new_socket, char* path) {
 	strncat(temp_content, footer_element, strlen(footer_element));
 
 	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
-
+	
 	int html_content_length = strlen(temp_content);
 
 	// Creates a header string with the size of temp_header length plus the string size of html content length
-	char *header = (char*) malloc (sizeof(char) * (strlen(temp_header) + snprintf(NULL, 0, "%d", html_content_length) + 4));
-	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\r\n\r\n", html_content_length);
+	char *header = (char*) malloc (sizeof(char) * (strlen(temp_header) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", html_content_length) + 4));
+	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\n%s\r\n\r\n", html_content_length, req -> cookie);
 
 	// Creates response  with the necessary size. (header length  + content length)
 	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + html_content_length) + 1);
@@ -287,6 +235,8 @@ void request_handler(void *new_socket) {
 
 	parse(request_buffer, req);
 
+
+
 	if(!strcmp(req -> method, "GET")){
 
 		struct stat statbuf;
@@ -298,12 +248,13 @@ void request_handler(void *new_socket) {
 		} else {
 			fstat(fd, &statbuf);
 			if(S_ISREG(statbuf.st_mode)){
-				printf("Is a regular file.\n");
 
 				serve_file(new_socket, req -> path);
 				
 			} else if(S_ISDIR(statbuf.st_mode)){
-				render_directory(new_socket, req -> path);
+
+				render_directory(new_socket, req);
+
 			}
 		}
 
