@@ -195,12 +195,12 @@ void authenticate(void *new_socket, HTTP_REQUEST* req){
 		printf("Credentials: %s\n", dec);
 	
 
-	char *login = strdup(strtok(dec, ":"));
-	char* password = strdup(strtok(NULL, ":"));
+		char *login = strdup(strtok(dec, ":"));
+		char* password = strdup(strtok(NULL, ":"));
 
-	printf("LOGIN: %s\n", login);
-	printf("PASSWORD: %s\n", password);
-}6776
+		printf("LOGIN: %s\n", login);
+		printf("PASSWORD: %s\n", password);
+	}
 }
 
 void request_handler(void *new_socket) {
@@ -214,10 +214,33 @@ void request_handler(void *new_socket) {
 	
 
 	// Receives request from client
-	if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer), MSG_PEEK) == -1) {
-		fprintf(stderr, "Error to receive request from client --> %s", strerror(errno));
-		exit(EXIT_FAILURE);
+	//if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer) - 1, MSG_PEEK) == -1) {
+		//fprintf(stderr, "Error to receive request from client --> %s", strerror(errno));
+		//exit(EXIT_FAILURE);
+	//}
+
+	for (;;) {
+	  ssize_t bytes_received = recv ( *(int*) new_socket , request_buffer , sizeof(request_buffer), 0 ) ;
+	  if ( bytes_received == -1 ) {
+	    printf ( "An error occured during the receive procedure \n" ) ;
+	    return 0 ;
+	  }
+
+	  *(request_buffer+bytes_received) = '\0';
+
+	  if ( bytes_received == 0 )
+	    return 0;
+
+	  printf ("%s", request_buffer);
+	  printf("SIZE: %d\n", strlen(request_buffer));
+	  break;
 	}
+
+
+	printf("SIZE OF RECV: %d\n", strlen(request_buffer));
+	printf("==================================================\n");
+	printf("%s\n", request_buffer);
+	printf("==================================================\n");
 
 	parse(request_buffer, req);
 
@@ -245,9 +268,8 @@ void request_handler(void *new_socket) {
 		}
 
 		free(req);
-
-		close(*(int*) new_socket);
 	}
+	close(*(int*) new_socket);
 }
 
 void send_new(int fd, char *msg) {
