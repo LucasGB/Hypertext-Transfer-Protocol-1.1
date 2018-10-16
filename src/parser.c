@@ -3,13 +3,17 @@
 #include <stdio.h>
 
 #include "string.h"
-#include "parser.h"      
+#include "parser.h"  
+#include "errors.h"    
 
-
-ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
+void print_header(char *request_buffer){
 	printf("---------------- Inicio do HEADER -------------\n");
 	printf("%s", request_buffer);
 	printf("---------------- Fim do HEADER -------------\n");
+}
+
+ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
+	print_header(request_buffer);
 
 	// Search for CRLF in request buffer
 	char *ret = strstr(request_buffer, "\r\n\r\n");
@@ -41,19 +45,50 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 
 		char* version = strdup(strtok(NULL, " "));
 
+		char* auth = strstr(request_buffer, "Authorization: Basic ");
+		if(auth == NULL){
+			req -> authorization = NULL;
+		} else {
+			strtok(auth, " ");
+			strtok(NULL, " ");
+			req -> authorization  = strdup(strtok(NULL, " "));
+		}
+
+
 		char* cookie = strstr(request_buffer, "Cookie");
 		if(cookie == NULL){
+<<<<<<< HEAD
 			printf("NO COOKIE\n");
 			req -> cookie = strdup("Set-Cookie: cookie-count=1; Path=/;\n");
 		} else {
+=======
+			printf("No cookie\n");
+			req -> cookie = strdup("Set-Cookie: cookie-count=1\n");
+		} else {
+			printf("else cookie\n");
+>>>>>>> da6097962354bb900b7e29b1bde5e00a521146f1
 			strtok(cookie, "=");
 
 			int cookie_count = atoi(strdup(strtok(NULL, "="))) + 1;
+			printf("cookie-count: %d\n", cookie_count);
 
+<<<<<<< HEAD
 			int cookie_header_size = snprintf(NULL, 0, "Set-Cookie: cookie-count=%d; Path=/;\n", cookie_count) + 1;
 
 			req -> cookie = (char*) malloc (sizeof(char) * cookie_header_size);
 			snprintf(req -> cookie, cookie_header_size, "Set-Cookie: cookie-count=%d; Path=/;\n", cookie_count);
+=======
+			// Why did I write this?
+			//free(req -> cookie);
+
+			int cookie_header_size = snprintf(NULL, 0, "Set-Cookie: cookie-count=%d\n", cookie_count) + 1;
+			printf("cookie header size\n");
+
+			req -> cookie = (char*) malloc (sizeof(char) * cookie_header_size);
+			printf("malloc cookie\n");
+			snprintf(req -> cookie, cookie_header_size, "Set-Cookie: cookie-count=%d\n", cookie_count);
+			printf("snprintf cookie\n");
+>>>>>>> da6097962354bb900b7e29b1bde5e00a521146f1
 		}
 						
 		if(strcmp(version, "HTTP/1.1")){
