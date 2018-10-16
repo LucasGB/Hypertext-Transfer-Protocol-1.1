@@ -5,6 +5,7 @@ typedef struct {
 	char* method;
 	char* path;
 	char* cookie;
+	char* authorization;
 	//off_t offset;
 	//size_t end;
 } HTTP_REQUEST; 

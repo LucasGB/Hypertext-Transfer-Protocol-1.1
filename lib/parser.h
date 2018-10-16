@@ -8,4 +8,6 @@
 
 ssize_t parse(char* request_buffer, HTTP_REQUEST *req);
 
+void print_header(char *request_buffer);
+
 #endif

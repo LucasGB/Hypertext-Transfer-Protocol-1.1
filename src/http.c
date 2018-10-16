@@ -16,6 +16,7 @@
 #include "parser.h"
 #include "http_request.h"
 #include "errors.h"
+#include "b64.h"
 #include "dirent.h"
 
 #define BUFSIZ 256
@@ -114,64 +115,63 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 	    		temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 	    		strncat(temp_content, link, strlen(link));
 			}
-		    //printf("Link: %s\n", link);
-
-		   // temp_content_length += strlen(link);
-	    	//temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-	    	//strncat(temp_content, link, strlen(link));
-
-	    	//printf("PATH:%s\n", path);
 		}
 		    	
 	    closedir(d);
 	}
 
+	printf("Built links\n");
+
 	temp_content_length += strlen("</body>\n</html>");
 	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 	strncat(temp_content, footer_element, strlen(footer_element));
 
-	char *temp_header = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
-	
 	int html_content_length = strlen(temp_content);
 
+	int header_size = strlen("HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: \r\n\r\n") + strlen(req -> cookie) + snprintf(NULL, 0, "%d", html_content_length) + 1;
+	printf("calculate header size\n");
 	// Creates a header string with the size of temp_header length plus the string size of html content length
-	char *header = (char*) malloc (sizeof(char) * (strlen(temp_header) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", html_content_length) + 4));
-	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\n%s\r\n\r\n", html_content_length, req -> cookie);
+	char *header = (char*) malloc (sizeof(char) * header_size);
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\n%s\r\n\r\n", html_content_length, req -> cookie);
 
+	printf("built header\n");
 	// Creates response  with the necessary size. (header length  + content length)
 	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + html_content_length) + 1);
 
+	printf("malloc res\n");
 	// Concatenates header and html to response
 	strcpy(resp, header);
 	strcat(resp, temp_content);
 
+	printf("built res\n");
 	send_new(*(int*) new_socket, resp);
 
+	printf("sent res\n");
 	free(header);
 	free(temp_content);
 	free(footer_element);
 	free(resp);
 }
 
-void serve_file(void *new_socket, char* path){
-	char *file_type = get_mime_type(path);
-	int file_size = get_file_size(path);
+void serve_file(void *new_socket, HTTP_REQUEST *req){
+	char *file_type = get_mime_type(req -> path);
+	int file_size = get_file_size(req -> path);
 
-	int header_size = strlen(file_type) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+	int header_size = strlen(file_type) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
 
 	char *header = (char*) malloc (sizeof(char) * header_size);
-	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\r\n\r\n", file_type, file_size);
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\n%s\r\n\r\n", file_type, file_size, req -> cookie);
 
 	send_new(*(int*) new_socket, header);
 
 	int remain_data = file_size;
 	int sent_bytes = 0;
 	off_t offset = 0;
-	int fd = open(path, O_RDONLY);
+	int fd = open(req -> path, O_RDONLY);
 
 	// Force flush socket stream
 	while(((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && remain_data > 0){
-		int flag = 1; 
+		int flag = 1;
 		setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 		remain_data -= sent_bytes;
 		flag = 0; 
@@ -182,40 +182,25 @@ void serve_file(void *new_socket, char* path){
 	free(header);
 }
 
-void serve_chunked_file(void *new_socket, char* path){
-	char *file_type = get_mime_type(path);
+void authenticate(void *new_socket, HTTP_REQUEST* req){
+	char* dec;
+	if(req -> authorization == NULL){
+		printf("No Auth\n");
+		error_401(new_socket);
+		//close(*(int*) new_socket);
+		printf("ads\n");
 
-	// READ THIS LINE AGAIN, SLOWLY, AND FIX IT
-	char *header = (char*) malloc (sizeof(char) * (strlen("HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ") + snprintf(NULL, 0, "%d", strlen(file_type)) + 4));
-	sprintf(header, "HTTP/1.1 200 OK\nContent-Type: %s\nTransfer-Enconding: chunked\r\n\r\n", file_type);
+	} else {
+		dec = b64_decode(req -> authorization, strlen(req -> authorization));
+		printf("Credentials: %s\n", dec);
+	
 
+	char *login = strdup(strtok(dec, ":"));
+	char* password = strdup(strtok(NULL, ":"));
 
-	off_t offset = 0;
-	int remain_data = 0;
-	int sent_bytes = 0;
-
-	struct stat file_stat;
-	int fd = open(path, O_RDONLY);
-	fstat(fd, &file_stat);
-
-    remain_data = file_stat.st_size;
-    /* Sending file data */
-    send_new(*(int*) new_socket, header);
-
-    //while (((sent_bytes = sendbigfile(*(int*) new_socket, fd, &offset, 256)) > 0) && (remain_data > 0)) {
-    //            remain_data -= sent_bytes;
-  //              fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-//        }
-
-        while (((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && (remain_data > 0)) {
-                remain_data -= sent_bytes;
-                fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-        }
-        int chunk_size = snprintf(NULL, 0, "0\r\n");
-            char chunk[chunk_size];
-            sprintf(chunk, "0\r\n");
-            int b = write(*(int*) new_socket, chunk, strlen(chunk));
-            printf("HEAD: %d\n", b);
+	printf("LOGIN: %s\n", login);
+	printf("PASSWORD: %s\n", password);
+}
 }
 
 void request_handler(void *new_socket) {
@@ -226,6 +211,7 @@ void request_handler(void *new_socket) {
 	int* offset;
 	ssize_t len;
 	char request_buffer[1024];
+	
 
 	// Receives request from client
 	if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer), MSG_PEEK) == -1) {
@@ -235,7 +221,7 @@ void request_handler(void *new_socket) {
 
 	parse(request_buffer, req);
 
-
+	authenticate(new_socket, req);
 
 	if(!strcmp(req -> method, "GET")){
 
@@ -249,7 +235,7 @@ void request_handler(void *new_socket) {
 			fstat(fd, &statbuf);
 			if(S_ISREG(statbuf.st_mode)){
 
-				serve_file(new_socket, req -> path);
+				serve_file(new_socket, req);
 				
 			} else if(S_ISDIR(statbuf.st_mode)){
 
