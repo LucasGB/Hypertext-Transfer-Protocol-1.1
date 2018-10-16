@@ -200,7 +200,7 @@ void authenticate(void *new_socket, HTTP_REQUEST* req){
 
 	printf("LOGIN: %s\n", login);
 	printf("PASSWORD: %s\n", password);
-}
+}6776
 }
 
 void request_handler(void *new_socket) {
