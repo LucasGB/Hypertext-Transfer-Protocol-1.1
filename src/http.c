@@ -182,14 +182,13 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 	free(header);
 }
 
-void authenticate(void *new_socket, HTTP_REQUEST* req){
+int authenticate(void *new_socket, HTTP_REQUEST* req){
 	char* dec;
 	if(req -> authorization == NULL){
 		printf("No Auth\n");
 		error_401(new_socket);
-		//close(*(int*) new_socket);
-		printf("ads\n");
-
+		
+		return 0;
 	} else {
 		dec = b64_decode(req -> authorization, strlen(req -> authorization));
 		printf("Credentials: %s\n", dec);
@@ -198,8 +197,11 @@ void authenticate(void *new_socket, HTTP_REQUEST* req){
 		char *login = strdup(strtok(dec, ":"));
 		char* password = strdup(strtok(NULL, ":"));
 
-		printf("LOGIN: %s\n", login);
-		printf("PASSWORD: %s\n", password);
+		if(!strcmp(login, "admin") && !strcmp(password, "admin")){
+			return 1;
+		} else {
+			error_401(new_socket);
+		}
 	}
 }
 
@@ -231,44 +233,41 @@ void request_handler(void *new_socket) {
 	  if ( bytes_received == 0 )
 	    return 0;
 
-	  printf ("%s", request_buffer);
-	  printf("SIZE: %d\n", strlen(request_buffer));
 	  break;
 	}
 
-
-	printf("SIZE OF RECV: %d\n", strlen(request_buffer));
-	printf("==================================================\n");
-	printf("%s\n", request_buffer);
-	printf("==================================================\n");
-
 	parse(request_buffer, req);
 
-	authenticate(new_socket, req);
+	int auth = authenticate(new_socket, req);
 
-	if(!strcmp(req -> method, "GET")){
+	if(auth == 1){
+		if(!strcmp(req -> method, "GET")){
 
-		struct stat statbuf;
+			struct stat statbuf;
 
-		if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
-			error_404(new_socket);	
-            fprintf(stderr, "Error opening file --> %s", strerror(errno));
+			if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
+				error_404(new_socket);	
+	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
 
-		} else {
-			fstat(fd, &statbuf);
-			if(S_ISREG(statbuf.st_mode)){
+			} else {
+				fstat(fd, &statbuf);
+				if(S_ISREG(statbuf.st_mode)){
 
-				serve_file(new_socket, req);
-				
-			} else if(S_ISDIR(statbuf.st_mode)){
+					serve_file(new_socket, req);
+					
+				} else if(S_ISDIR(statbuf.st_mode)){
 
-				render_directory(new_socket, req);
+					render_directory(new_socket, req);
 
+				}
 			}
+
+			//free(req);
 		}
 
-		free(req);
 	}
+
+	free(req);
 	close(*(int*) new_socket);
 }
 
