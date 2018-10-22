@@ -18,6 +18,8 @@
 #include "errors.h"
 #include "b64.h"
 #include "dirent.h"
+#include "utils.h"
+#include "embedded_c_compiler.h"
 
 #define BUFSIZ 256
 
@@ -31,6 +33,7 @@ mime_map meme_types [] = {
     {".gif", "image/gif"},
     {".htm", "text/html"},
     {".html", "text/html"},
+    {".dyn", "text/html"},
     {".jpeg", "image/jpeg"},
     {".jpg", "image/jpeg"},
     {".ico", "image/x-icon"},
@@ -59,13 +62,6 @@ static const char* get_mime_type(char *filename){
     return default_mime_type;
 }
 
-size_t get_file_size(const char* filename) {
-    struct stat st;
-    if(stat(filename, &st) != 0) {
-        return 0;
-    }
-    return st.st_size;   
-}
 
 void render_directory(void *new_socket, HTTP_REQUEST *req) {
 
@@ -154,6 +150,16 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 }
 
 void serve_file(void *new_socket, HTTP_REQUEST *req){
+
+	char *dot = strrchr(req -> path, '.');
+	printf("DOT %s\n", dot);
+
+	if(strcmp(".dyn", dot) == 0) {
+		char* html_body;
+
+		compile_embbeded_c(req -> path, html_body);
+	}
+
 	char *file_type = get_mime_type(req -> path);
 	int file_size = get_file_size(req -> path);
 

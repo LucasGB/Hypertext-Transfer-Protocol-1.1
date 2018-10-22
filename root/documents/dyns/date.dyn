@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>Server datetime</h1>
+
+<p> <%= getDate() %> </p>
+
+</body>
+</html>
