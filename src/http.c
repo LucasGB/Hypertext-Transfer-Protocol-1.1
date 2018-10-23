@@ -154,37 +154,52 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 	char *dot = strrchr(req -> path, '.');
 	printf("DOT %s\n", dot);
 
+	char* header;
+	int header_size;
+	char *file_type;
+	int file_size;
+
 	if(strcmp(".dyn", dot) == 0) {
-		char* html_body;
+		char* html_body = compile_embbeded_c(req -> path);
+		int html_body_length = strlen(html_body);
 
-		compile_embbeded_c(req -> path, html_body);
+		header_size = strlen("text/html") + strlen(req -> cookie) + html_body_length + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+		header = (char*) malloc (sizeof(char) * header_size);
+		snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\n%s\r\n\r\n", html_body_length, req -> cookie);
+
+		char* resp = (char*) malloc (sizeof(char) * (header_size + html_body_length) );
+		snprintf(resp, header_size + html_body_length, "%s%s", header, html_body);
+		
+		send_new(*(int*) new_socket, resp);
+	} else {
+
+		file_type = get_mime_type(req -> path);
+		file_size = get_file_size(req -> path);
+
+		header_size = strlen(file_type) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+
+		header = (char*) malloc (sizeof(char) * header_size);
+		snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\n%s\r\n\r\n", file_type, file_size, req -> cookie);
+
+		send_new(*(int*) new_socket, header);
+
+		int remain_data = file_size;
+		int sent_bytes = 0;
+		off_t offset = 0;
+		int fd = open(req -> path, O_RDONLY);
+
+		// Force flush socket stream
+		while(((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && remain_data > 0){
+			int flag = 1;
+			setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+			remain_data -= sent_bytes;
+			flag = 0; 
+			setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+		}
+
+		close(fd);
 	}
-
-	char *file_type = get_mime_type(req -> path);
-	int file_size = get_file_size(req -> path);
-
-	int header_size = strlen(file_type) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
-
-	char *header = (char*) malloc (sizeof(char) * header_size);
-	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\n%s\r\n\r\n", file_type, file_size, req -> cookie);
-
-	send_new(*(int*) new_socket, header);
-
-	int remain_data = file_size;
-	int sent_bytes = 0;
-	off_t offset = 0;
-	int fd = open(req -> path, O_RDONLY);
-
-	// Force flush socket stream
-	while(((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && remain_data > 0){
-		int flag = 1;
-		setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-		remain_data -= sent_bytes;
-		flag = 0; 
-		setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-	}
-
-	close(fd);
+	
 	free(header);
 }
 

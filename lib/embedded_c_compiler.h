@@ -4,6 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-void compile_embbeded_c(char* file, char* html_body);
+char* compile_embbeded_c(char* file);
 
 #endif

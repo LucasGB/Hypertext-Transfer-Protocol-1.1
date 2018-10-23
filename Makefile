@@ -2,7 +2,7 @@
 CC = gcc
 
 # Flags
-CFLAGS = -I$(LDIR) -lpthread
+CFLAGS = -I$(LDIR) -lpthread -lm
 
 # C files directory
 CDIR = src
