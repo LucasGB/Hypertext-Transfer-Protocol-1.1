@@ -1,3 +1,6 @@
-#http
-#*.o
-#*.dSYM
+./src/obj/decode.o
+./src/obj/connect.o
+./src/obj/errors.o
+./src/obj/utils.o
+./src/obj/parser.o
+./src/obj/embedded_c_compiler.o

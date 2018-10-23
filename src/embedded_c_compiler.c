@@ -69,7 +69,6 @@ char* compile_embbeded_c(char* file){
 		char* embedded_code_line = slice(buffer, nugget_pos, offset, 1);
 
 		if(strcmp("%>", closing_bracket) == 0){
-			printf("ok\n");
 		} else {
 			printf("Missing '%>' on file.\n");
 			return;

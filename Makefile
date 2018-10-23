@@ -16,10 +16,10 @@ LDIR = lib
 #LIBS=-lm
 
 # Dependency files
-_DEPS = parser.h tlpi_hdr.h error_functions.h get_num.h connect.h errors.h b64.h utils.h embedded_c_compiler.h
+_DEPS = parser.h error_functions.h connect.h errors.h b64.h utils.h embedded_c_compiler.h
 DEPS = $(patsubst %,$(LDIR)/%,$(_DEPS))
 
-_OBJ = http.o parser.o connect.o errors.o decode.o utils.o embedded_c_compiler.o
+_OBJ = http.o parser.o  errors.o decode.o utils.o embedded_c_compiler.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(CDIR)/%.c $(DEPS)

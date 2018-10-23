@@ -116,8 +116,6 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 	    closedir(d);
 	}
 
-	printf("Built links\n");
-
 	temp_content_length += strlen("</body>\n</html>");
 	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 	strncat(temp_content, footer_element, strlen(footer_element));
@@ -125,24 +123,20 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 	int html_content_length = strlen(temp_content);
 
 	int header_size = strlen("HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: \r\n\r\n") + strlen(req -> cookie) + snprintf(NULL, 0, "%d", html_content_length) + 1;
-	printf("calculate header size\n");
+
 	// Creates a header string with the size of temp_header length plus the string size of html content length
 	char *header = (char*) malloc (sizeof(char) * header_size);
 	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\n%s\r\n\r\n", html_content_length, req -> cookie);
 
-	printf("built header\n");
 	// Creates response  with the necessary size. (header length  + content length)
 	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + html_content_length) + 1);
 
-	printf("malloc res\n");
 	// Concatenates header and html to response
 	strcpy(resp, header);
 	strcat(resp, temp_content);
 
-	printf("built res\n");
 	send_new(*(int*) new_socket, resp);
 
-	printf("sent res\n");
 	free(header);
 	free(temp_content);
 	free(footer_element);
@@ -152,7 +146,6 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 void serve_file(void *new_socket, HTTP_REQUEST *req){
 
 	char *dot = strrchr(req -> path, '.');
-	printf("DOT %s\n", dot);
 
 	char* header;
 	int header_size;
@@ -206,14 +199,11 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 int authenticate(void *new_socket, HTTP_REQUEST* req){
 	char* dec;
 	if(req -> authorization == NULL){
-		printf("No Auth\n");
 		error_401(new_socket);
 		
 		return 0;
 	} else {
-		dec = b64_decode(req -> authorization, strlen(req -> authorization));
-		printf("Credentials: %s\n", dec);
-	
+		dec = b64_decode(req -> authorization, strlen(req -> authorization));	
 
 		char *login = strdup(strtok(dec, ":"));
 		char* password = strdup(strtok(NULL, ":"));
