@@ -43,6 +43,7 @@ mime_map meme_types [] = {
     {".png", "image/png"},
     {".svg", "image/svg+xml"},
     {".xml", "text/xml"},
+    {".o", "text/html"},
     {NULL, NULL},
 };
 
@@ -62,8 +63,21 @@ static const char* get_mime_type(char *filename){
     return default_mime_type;
 }
 
+static const char* get_file_extention(char *filename){
+    char *dot = strrchr(filename, '.');
+    if(dot){ // strrchar Locate last occurrence of character in string
+        mime_map *map = meme_types;
+        while(map->extension){
+            if(strcmp(map->extension, dot) == 0){
+                return map->extension;
+            }
+            map++;
+        }
+    }
+    return default_mime_type;
+}
 
-void render_directory(void *new_socket, HTTP_REQUEST *req) {
+void render_directory(void *client_socket, HTTP_REQUEST *req) {
 
 	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
 	char* footer_element = strdup("</body>\n</html>");
@@ -135,7 +149,7 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 	strcpy(resp, header);
 	strcat(resp, temp_content);
 
-	send_new(*(int*) new_socket, resp);
+	send_new(*(int*) client_socket, resp);
 
 	free(header);
 	free(temp_content);
@@ -143,7 +157,7 @@ void render_directory(void *new_socket, HTTP_REQUEST *req) {
 	free(resp);
 }
 
-void serve_file(void *new_socket, HTTP_REQUEST *req){
+void serve_file(void *client_socket, HTTP_REQUEST *req){
 
 	char *dot = strrchr(req -> path, '.');
 
@@ -163,7 +177,7 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 		char* resp = (char*) malloc (sizeof(char) * (header_size + html_body_length) );
 		snprintf(resp, header_size + html_body_length, "%s%s", header, html_body);
 		
-		send_new(*(int*) new_socket, resp);
+		send_new(*(int*) client_socket, resp);
 	} else {
 
 		file_type = get_mime_type(req -> path);
@@ -174,7 +188,7 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 		header = (char*) malloc (sizeof(char) * header_size);
 		snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\n%s\r\n\r\n", file_type, file_size, req -> cookie);
 
-		send_new(*(int*) new_socket, header);
+		send_new(*(int*) client_socket, header);
 
 		int remain_data = file_size;
 		int sent_bytes = 0;
@@ -182,12 +196,12 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 		int fd = open(req -> path, O_RDONLY);
 
 		// Force flush socket stream
-		while(((sent_bytes = sendfile(*(int*) new_socket, fd, &offset, 256)) > 0) && remain_data > 0){
+		while(((sent_bytes = sendfile(*(int*) client_socket, fd, &offset, 256)) > 0) && remain_data > 0){
 			int flag = 1;
-			setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+			setsockopt(*(int*) client_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 			remain_data -= sent_bytes;
 			flag = 0; 
-			setsockopt(*(int*) new_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+			setsockopt(*(int*) client_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 		}
 
 		close(fd);
@@ -196,10 +210,10 @@ void serve_file(void *new_socket, HTTP_REQUEST *req){
 	free(header);
 }
 
-int authenticate(void *new_socket, HTTP_REQUEST* req){
+int authenticate(void *client_socket, HTTP_REQUEST* req){
 	char* dec;
 	if(req -> authorization == NULL){
-		error_401(new_socket);
+		error_401(client_socket);
 		
 		return 0;
 	} else {
@@ -211,12 +225,12 @@ int authenticate(void *new_socket, HTTP_REQUEST* req){
 		if(!strcmp(login, "admin") && !strcmp(password, "admin")){
 			return 1;
 		} else {
-			error_401(new_socket);
+			error_401(client_socket);
 		}
 	}
 }
 
-void request_handler(void *new_socket) {
+void request_handler(void *client_socket) {
 	HTTP_REQUEST* req = (HTTP_REQUEST*) malloc (sizeof(HTTP_REQUEST));
 	int fd;
 	int sent_bytes = 0;
@@ -224,18 +238,10 @@ void request_handler(void *new_socket) {
 	int* offset;
 	ssize_t len;
 	char request_buffer[1024];
-	
-
-	// Receives request from client
-	//if(recv(*(int*) new_socket, request_buffer, sizeof(request_buffer) - 1, MSG_PEEK) == -1) {
-		//fprintf(stderr, "Error to receive request from client --> %s", strerror(errno));
-		//exit(EXIT_FAILURE);
-	//}
 
 	for (;;) {
-	  ssize_t bytes_received = recv ( *(int*) new_socket , request_buffer , sizeof(request_buffer), 0 ) ;
+	  ssize_t bytes_received = recv ( *(int*) client_socket , request_buffer , sizeof(request_buffer), 0 ) ;
 	  if ( bytes_received == -1 ) {
-	    printf ( "An error occured during the receive procedure \n" ) ;
 	    return 0 ;
 	  }
 
@@ -249,7 +255,7 @@ void request_handler(void *new_socket) {
 
 	parse(request_buffer, req);
 
-	int auth = authenticate(new_socket, req);
+	int auth = authenticate(client_socket, req);
 
 	if(auth == 1){
 		if(!strcmp(req -> method, "GET")){
@@ -257,18 +263,22 @@ void request_handler(void *new_socket) {
 			struct stat statbuf;
 
 			if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
-				error_404(new_socket);	
+				error_404(client_socket);	
 	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
 
 			} else {
 				fstat(fd, &statbuf);
 				if(S_ISREG(statbuf.st_mode)){
 
-					serve_file(new_socket, req);
-					
+					if(req -> query_string){
+						printf("\nQSTRING: %s\n", req -> query_string);
+					} else {
+						serve_file(client_socket, req);
+					}
+			
 				} else if(S_ISDIR(statbuf.st_mode)){
 
-					render_directory(new_socket, req);
+					render_directory(client_socket, req);
 
 				}
 			}
@@ -279,7 +289,7 @@ void request_handler(void *new_socket) {
 	}
 
 	free(req);
-	close(*(int*) new_socket);
+	close(*(int*) client_socket);
 }
 
 void send_new(int fd, char *msg) {
@@ -291,7 +301,7 @@ void send_new(int fd, char *msg) {
 int main(int argc, char* argv[]) {
 
 	//	char request_buffer[BUFFER_SIZE];
-	int *new_socket;
+	int *client_socket;
 
 	// Socket file descriptors
 	int listen_fd, conn_fd;
@@ -346,16 +356,17 @@ int main(int argc, char* argv[]) {
 			fprintf(stderr, "Error on accept --> %s", strerror(errno));
 			exit(EXIT_FAILURE);
 		} else {
-			//pthread_t sniffer_thread;
-			new_socket = malloc (sizeof(int*));
-			*new_socket = conn_fd;
+			pthread_t sniffer_thread;
+			
+			client_socket = malloc (sizeof(int*));
+			*client_socket = conn_fd;
 
-			request_handler(new_socket);
+			request_handler(client_socket);
 
-			//if(pthread_create(&sniffer_thread, NULL, request_handler, (void*) new_socket) < 0){
-			//	fprintf(stderr, "Could not create thread --> %s", strerror(errno));
-			//	exit(EXIT_FAILURE);
-			//}
+			if(pthread_create(&sniffer_thread, NULL, request_handler, (void*) client_socket) < 0){
+				fprintf(stderr, "Could not create thread --> %s", strerror(errno));
+				exit(EXIT_FAILURE);
+			}
 		}
 
 	}

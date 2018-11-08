@@ -25,7 +25,6 @@ char* compile_embbeded_c(char* file){
 	char* buffer;
 	char* tmp_buffer;
 	char* ret;
-	char* reti;
 	int file_size = get_file_size(file);
 	int offset = 0;
 	 

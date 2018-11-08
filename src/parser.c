@@ -12,6 +12,14 @@ void print_header(char *request_buffer){
 	printf("---------------- Fim do HEADER -------------\n");
 }
 
+void parse_query_string(HTTP_REQUEST *req, char* url){
+	char *q_mark = strrchr(url, '?');
+	if(q_mark){
+		// Remove '?' from the query string
+		req -> query_string = strdup(++q_mark);
+	}
+}
+
 ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 	print_header(request_buffer);
 
@@ -38,10 +46,19 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		// Constructs the HTTP_REQUEST struct
 		req -> method = strdup(strtok(first_line, " "));
 
-		char* aux = strdup(strtok(NULL, " "));
+		char* url = strdup(strtok(NULL, " "));
+		printf("url\n");
 
-		req -> path = (char*) malloc (sizeof(char) * (strlen("./root") + strlen(aux)) + 1);
-		snprintf(req -> path, strlen(aux) + strlen("./root") + 1, "./root%s", aux);
+		parse_query_string(req, url);
+
+		printf("query\n");
+		printf("%d\n", strlen(req -> query_string));
+		printf("len query\n");
+		printf("%d\n", strlen(url));
+		printf("lenurl\n");
+
+		req -> path = (char*) malloc (sizeof(char) * (strlen("./root") + strlen(url)) + 1);
+		snprintf(req -> path, strlen(url) + strlen("./root") + 1, "./root%s", url);
 
 		char* version = strdup(strtok(NULL, " "));
 
@@ -72,13 +89,14 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 
 			snprintf(req -> cookie, cookie_header_size, "Set-Cookie: cookie-count=%d\n", cookie_count);
 		}
+
 						
 		if(strcmp(version, "HTTP/1.1")){
 			printf("INCORRECT VERSION.\n");
 		}
 
 		free(first_line);
-		free(aux);
+		free(url);
 	}
 
 }
