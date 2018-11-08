@@ -50,16 +50,19 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		printf("url\n");
 
 		parse_query_string(req, url);
+		
+		int query_string_length = 0;
+		if(req -> query_string) query_string_length = strlen(req -> query_string) + 1;
 
 		printf("query\n");
-		printf("%d\n", strlen(req -> query_string));
+		printf("%d\n", query_string_length);
 		printf("len query\n");
 		printf("%d\n", strlen(url));
 		printf("lenurl\n");
 
-		req -> path = (char*) malloc (sizeof(char) * (strlen("./root") + strlen(url)) + 1);
-		snprintf(req -> path, strlen(url) + strlen("./root") + 1, "./root%s", url);
-
+		req -> path = (char*) malloc (sizeof(char) * (strlen("./root") + strlen(url) - query_string_length) + 1);
+		snprintf(req -> path, strlen(url) + strlen("./root") - query_string_length + 1, "./root%s", url);
+		printf("path\n");
 		char* version = strdup(strtok(NULL, " "));
 
 		char* auth = strstr(request_buffer, "Authorization: Basic ");
@@ -70,6 +73,7 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 			strtok(NULL, " ");
 			req -> authorization  = strdup(strtok(NULL, " "));
 		}
+		printf("auth\n");
 
 
 		char* cookie = strstr(request_buffer, "Cookie");
@@ -90,10 +94,16 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 			snprintf(req -> cookie, cookie_header_size, "Set-Cookie: cookie-count=%d\n", cookie_count);
 		}
 
+		printf("cookie\n");
+
 						
 		if(strcmp(version, "HTTP/1.1")){
 			printf("INCORRECT VERSION.\n");
 		}
+
+		//printf("%s\n", req -> query_string);
+		//printf("%s\n", req -> path);
+		//printf("%s\n", url);
 
 		free(first_line);
 		free(url);
