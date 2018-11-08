@@ -14,7 +14,9 @@ void print_header(char *request_buffer){
 
 void parse_query_string(HTTP_REQUEST *req, char* url){
 	char *q_mark = strrchr(url, '?');
+	req -> query_string = NULL;
 	if(q_mark){
+		printf("FOUND QUESTION MARk\n");
 		// Remove '?' from the query string
 		req -> query_string = strdup(++q_mark);
 	}
@@ -52,7 +54,10 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		parse_query_string(req, url);
 		
 		int query_string_length = 0;
-		if(req -> query_string) query_string_length = strlen(req -> query_string) + 1;
+		if(req -> query_string) {
+			query_string_length = strlen(req -> query_string) + 1;
+			printf("QUERY STRING: %s\n", req -> query_string);
+		}
 
 		printf("query\n");
 		printf("%d\n", query_string_length);

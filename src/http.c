@@ -262,6 +262,8 @@ void request_handler(void *client_socket) {
 
 			struct stat statbuf;
 
+			printf("PATH: %s\n", req -> path);
+
 			if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
 				error_404(client_socket);	
 	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
@@ -288,6 +290,8 @@ void request_handler(void *client_socket) {
 
 	}
 
+	free(req -> query_string);
+	
 	free(req);
 	close(*(int*) client_socket);
 }
