@@ -12,6 +12,23 @@ void print_header(char *request_buffer){
 	printf("---------------- Fim do HEADER -------------\n");
 }
 
+int insert_param(char* _param, HTTP_REQUEST *req, int i){
+	char* saveptr2;
+	char* key;
+	char* value;
+
+	if(_param == NULL
+		|| (key = strtok_r(_param, "=", &saveptr2)) == NULL
+			|| (value = strtok_r(NULL, "=", &saveptr2)) == NULL) {
+				return 0;
+		}
+
+	req -> params[i] -> key = strdup(key);
+	req -> params[i] -> value = strdup(value);
+
+	return 1;
+}
+
 void parse_query_string(HTTP_REQUEST *req, char* url){
 	char *q_mark = strrchr(url, '?');
 	req -> query_string = NULL;
@@ -19,7 +36,36 @@ void parse_query_string(HTTP_REQUEST *req, char* url){
 		printf("FOUND QUESTION MARk\n");
 		// Remove '?' from the query string
 		req -> query_string = strdup(++q_mark);
+	
+
+	const char *tmp = req -> query_string;
+	int n_params = 1;
+	while(tmp = strstr(tmp, "&")){
+		n_params++;
+		tmp++;
 	}
+
+	char* saveptr1;
+
+	req -> params = (param **) malloc (sizeof(req -> params) * n_params);
+
+	char *_param = strdup(strtok_r(req -> query_string, "&", &saveptr1));
+		
+	for(int i = 0; i < n_params; i++){
+		req -> params[i] = (param*) malloc (sizeof(param));
+
+		if(!insert_param(_param, req, i)) { return 0; }
+	
+		_param = strtok_r(NULL, "&", &saveptr1);
+	}
+
+	printf("PRINTING PARAMS\n");
+	for(int i = 0; i < n_params; i++){
+		printf("%s\n", req -> params[i] -> key);
+		printf("%s\n", req -> params[i] -> value);
+	}
+
+}
 }
 
 ssize_t parse(char *request_buffer, HTTP_REQUEST *req){

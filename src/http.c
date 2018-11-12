@@ -178,6 +178,9 @@ void serve_file(void *client_socket, HTTP_REQUEST *req){
 		snprintf(resp, header_size + html_body_length, "%s%s", header, html_body);
 		
 		send_new(*(int*) client_socket, resp);
+	} else if(strcmp(".o", dot) == 0){
+		printf("CGI requested\n");
+		
 	} else {
 
 		file_type = get_mime_type(req -> path);
