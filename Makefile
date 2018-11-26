@@ -19,10 +19,10 @@ CGIDIR = root/cgi
 #LIBS=-lm
 
 # Dependency files
-_DEPS = parser.h error_functions.h connect.h errors.h b64.h utils.h embedded_c_compiler.h
+_DEPS = parser.h error_functions.h connect.h errors.h b64.h utils.h embedded_c_compiler.h cgi_module.h
 DEPS = $(patsubst %,$(LDIR)/%,$(_DEPS))
 
-_OBJ = http.o parser.o  errors.o decode.o utils.o embedded_c_compiler.o
+_OBJ = http.o parser.o  errors.o decode.o utils.o embedded_c_compiler.o cgi_module.c
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 _CGI = age_horoscope_calculator.o
@@ -34,7 +34,7 @@ $(ODIR)/%.o: $(CDIR)/%.c $(DEPS)
 $(CGIDIR)/%.o:
 	$(CC) -c $(CDIR)/age_horoscope_calculator.c -o $(CGIDIR)/age_horoscope_calculator.o -lm
 
-http: $(OBJ) $(CGI)
+http: $(OBJ) #$(CGI)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: clean

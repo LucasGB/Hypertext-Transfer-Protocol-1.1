@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
  
 // Check given year is leap year or not
@@ -19,16 +20,18 @@ int isLeapYear(int year, int mon){
     return (flag);
 }
  
-int main(int argc, char** argv[]){
+int main(int argc, char **argv){
 
-    int day = atoi(argv[1]);
-    int month = atoi(argv[2]);
-    int year = atoi(argv[3]);
+	if(argc != 4){
+		printf("%d\n", argc);
+		printf("Insufficient number of parameters\n");
+		return -1;
+	}
+ 	
+ 	int day = atoi(argv[1]);
+ 	int month = atoi(argv[2]);
+ 	int year = atoi(argv[3]);
 
-    printf("%d\n", day);
-    printf("%d\n", month);
-    printf("%d\n", year);
- 
     int DaysInMon[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     char dob[100];
     time_t ts;
@@ -71,7 +74,7 @@ int main(int argc, char** argv[]){
     }
  
     /* print age */
-    printf("\n## Ola, voce tem %d anos %d meses e %d dias de vida. ##\n", year, month, day);
+    printf("\nOla, voce tem %d anos %d meses e %d dias de vida.\n", year, month, day);
  
     return 0;
 }

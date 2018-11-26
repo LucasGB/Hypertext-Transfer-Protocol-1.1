@@ -160,6 +160,11 @@ void render_directory(void *client_socket, HTTP_REQUEST *req) {
 void serve_file(void *client_socket, HTTP_REQUEST *req){
 
 	char *dot = strrchr(req -> path, '.');
+	if(dot){
+		printf("FOUND DOT\n");
+	} else{
+		printf("NO DOT\n");
+	}
 
 	char* header;
 	int header_size;
@@ -178,9 +183,9 @@ void serve_file(void *client_socket, HTTP_REQUEST *req){
 		snprintf(resp, header_size + html_body_length, "%s%s", header, html_body);
 		
 		send_new(*(int*) client_socket, resp);
-	} else if(strcmp(".o", dot) == 0){
-		printf("CGI requested\n");
-		
+	} //if (stat(file, &sb) == 0 && sb.st_mode & S_IXUSR) {
+	 else if(strcmp(".o", dot) == 0){
+		printf("CGI requested\n");	
 	} else {
 
 		file_type = get_mime_type(req -> path);
@@ -271,6 +276,11 @@ void request_handler(void *client_socket) {
 				error_404(client_socket);	
 	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
 
+			}
+			else if(S_ISREG(statbuf.st_mode) && statbuf.st_mode & 0111) {
+				printf("CGI REQUESTED !!!\n");
+
+				call_cgi(req);
 			} else {
 				fstat(fd, &statbuf);
 				if(S_ISREG(statbuf.st_mode)){

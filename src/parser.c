@@ -30,26 +30,36 @@ int insert_param(char* _param, HTTP_REQUEST *req, int i){
 }
 
 void parse_query_string(HTTP_REQUEST *req, char* url){
+	printf("%s\n", url);
 	char *q_mark = strrchr(url, '?');
 	req -> query_string = NULL;
 	if(q_mark){
+		printf("Q_MARK POS: %d\n", strlen(url) - strlen(q_mark));
 		printf("FOUND QUESTION MARk\n");
 		// Remove '?' from the query string
 		req -> query_string = strdup(++q_mark);
+		printf("TEST %s\n", req -> query_string);
 	
 
-	const char *tmp = req -> query_string;
+	const char *tmp = strdup(req -> query_string);
 	int n_params = 1;
 	while(tmp = strstr(tmp, "&")){
 		n_params++;
 		tmp++;
 	}
+	printf("AFTER TEST %s\n", req -> query_string);
 
 	char* saveptr1;
 
 	req -> params = (param **) malloc (sizeof(req -> params) * n_params);
 
-	char *_param = strdup(strtok_r(req -> query_string, "&", &saveptr1));
+	char* tempstr = calloc(strlen(req -> query_string)+1, sizeof(char));
+	strcpy(tempstr, req -> query_string);
+
+
+	char *_param = strdup(strtok_r(tempstr, "&", &saveptr1));
+
+	printf("AFTER AFTER TEST %s\n", req -> query_string);
 		
 	for(int i = 0; i < n_params; i++){
 		req -> params[i] = (param*) malloc (sizeof(param));
@@ -146,6 +156,7 @@ ssize_t parse(char *request_buffer, HTTP_REQUEST *req){
 		}
 
 		printf("cookie\n");
+		printf("PARSER PATH: %s\n", req -> path);
 
 						
 		if(strcmp(version, "HTTP/1.1")){

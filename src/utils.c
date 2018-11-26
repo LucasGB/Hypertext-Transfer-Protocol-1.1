@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+
 size_t get_file_size(const char* filename) {
     struct stat st;
     if(stat(filename, &st) != 0) {
