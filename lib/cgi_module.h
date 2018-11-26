@@ -4,6 +4,6 @@
 #include "http_request.h"
 
 pid_t popen2(const char *command, int *infp, int *outfp);
-int call_cgi(HTTP_REQUEST* req);
+char* call_cgi(HTTP_REQUEST* req);
 
 #endif

@@ -276,14 +276,34 @@ void request_handler(void *client_socket) {
 				error_404(client_socket);	
 	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
 
-			}
-			else if(S_ISREG(statbuf.st_mode) && statbuf.st_mode & 0111) {
-				printf("CGI REQUESTED !!!\n");
-
-				call_cgi(req);
 			} else {
 				fstat(fd, &statbuf);
-				if(S_ISREG(statbuf.st_mode)){
+
+				if(S_ISREG(statbuf.st_mode) && statbuf.st_mode & 0111) {
+					printf("CGI REQUESTED !!!\n");
+
+					char *html_body = call_cgi(req);
+					int html_body_length = strlen(html_body);
+
+					int header_size = strlen("text/html") + strlen(req -> cookie) + html_body_length + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+					char* header = (char*) malloc (sizeof(char) * header_size);
+					snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: %d\n%s\r\n\r\n", html_body_length, req -> cookie);
+
+					char* resp = (char*) malloc (sizeof(char) * (header_size + html_body_length) );
+					snprintf(resp, header_size + html_body_length, "%s%s", header, html_body);
+
+					printf("RESPONSE: %s\n", resp);
+					
+					send_new(*(int*) client_socket, resp);
+
+					free(html_body);
+					free(header);
+					free(resp);
+					close(fd);
+
+
+				} 
+				else if(S_ISREG(statbuf.st_mode)){
 
 					if(req -> query_string){
 						printf("\nQSTRING: %s\n", req -> query_string);
