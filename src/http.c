@@ -77,7 +77,10 @@ static const char* get_file_extention(char *filename){
     return default_mime_type;
 }
 
-void render_directory(void *client_socket, HTTP_REQUEST *req) {
+void render_directory(void *client_socket, HTTP_REQUEST *req){
+	
+}
+void render_directory_old(void *client_socket, HTTP_REQUEST *req) {
 
 	char* temp_content = strdup("<!DOCTYPE html>\n<html>\n<head>\n<title>HTTP Server</title>\n</head>\n<body>\n");
 	char* footer_element = strdup("</body>\n</html>");

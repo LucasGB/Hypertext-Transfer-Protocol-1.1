@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>HTTP Server</title>
+</head>
+<body onload="render_dir()">
+
+
+<script type="text/javascript">
+	function reqListener () {
+  		console.log(this.responseText);
+	}
+
+	function render_dir() {
+		var oReq = new XMLHttpRequest();
+		oReq.addEventListener("load", reqListener);
+		var url = window.location.href;
+		console.log(url);
+		oReq.open("GET", url);
+		oReq.send();	
+	}
+</script>
+
+</body>
+
+</html>
