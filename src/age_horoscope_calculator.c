@@ -25,10 +25,6 @@ int main(int argc, char** argv[]){
     int month = atoi(argv[2]);
     int year = atoi(argv[3]);
 
-    printf("%d\n", day);
-    printf("%d\n", month);
-    printf("%d\n", year);
- 
     int DaysInMon[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     char dob[100];
     time_t ts;
@@ -37,9 +33,6 @@ int main(int argc, char** argv[]){
     /*get current date.*/
     ts = time(NULL);
     ct = localtime(&ts);
- 
-    printf("Current Date: %d/%d/%d\n",
-            ct->tm_mday, ct->tm_mon + 1, ct->tm_year + 1900);
  
     day = DaysInMon[month - 1] - day + 1;
  
@@ -71,7 +64,7 @@ int main(int argc, char** argv[]){
     }
  
     /* print age */
-    printf("\n## Ola, voce tem %d anos %d meses e %d dias de vida. ##\n", year, month, day);
+    printf("\nOla, voce tem %d anos %d meses e %d dias de vida.\n", year, month, day);
  
     return 0;
 }

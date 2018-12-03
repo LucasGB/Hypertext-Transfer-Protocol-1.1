@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "cgi_module.h"
 #include "http_request.h"
@@ -70,15 +71,16 @@ pid_t popen2(const char *command, int *infp, int *outfp) {
 	return child_pid;
 }
 
-/*
-* infp will be the stdin (in file deor)
-* outfp will be the stdout (out file deor)
-*/
+char* call_cgi(HTTP_REQUEST* req) {
 
-int call_cgi(HTTP_REQUEST* req) {
+	/* Find the resource name */
+	char *resource = strrchr(req -> path, '/');
+	++resource;
+
 	int infp, outfp;
 	char buf[128];
 
+	/* Calculates the size of command string */
 	int command_length = snprintf(NULL, 0, "%s %s %s %s", req -> path, req -> params[0] -> value, req -> params[1] -> value, req -> params[2] -> value) + 1;
 	char command[command_length];
 	snprintf(command, command_length, "%s %s %s %s", req -> path, req -> params[0] -> value, req -> params[1] -> value, req -> params[2] -> value);
@@ -93,8 +95,10 @@ int call_cgi(HTTP_REQUEST* req) {
 	//close(infp);
 				
 	read(outfp, buf, 128);
-	printf("buf = '%s'\n", buf);
-	printf("%d\n", strlen(buf));
 
-	return 0;
+	int html_length = snprintf(NULL, 0, "<!DOCTYPE html><html><head><title>Calculadora de idade</title></head><body><div id=\"texto\">%s</div><script type=\"text/javascript\"></script></body></html>", buf) + 1;
+	char *html = (char*) malloc (sizeof(char) * html_length);
+	snprintf(html, html_length, "<!DOCTYPE html><html><head><title>Calculadora de idade</title></head><body><div id=\"texto\">%s</div><script type=\"text/javascript\"></script></body></html>", buf);
+
+	return html;
 }
