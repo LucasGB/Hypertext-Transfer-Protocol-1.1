@@ -190,6 +190,71 @@ void render_directory_old(void *client_socket, HTTP_REQUEST *req) {
 	free(resp);
 }
 
+void send_dir_json(void *client_socket, HTTP_REQUEST *req){
+	int temp_json_length = strlen(temp_content);
+
+	DIR *d;
+	struct dirent *dir;
+	printf("CREATING JSON");
+
+	char* prefix = "./root";
+
+	int path_length = snprintf(NULL, 0, "./root%s", req -> query_string) + 1;
+	printf("%d\n", path_length);
+	char* path = (char*) malloc (sizeof(char) * path_length);
+	snprintf(path, path_length, "./root%s", req -> query_string);
+
+
+	d = opendir(path);
+	printf("OPENED DIR\n");
+
+	char* abs_path = strdup(req -> query_string);
+	printf("ABS PATH: %s\n", abs_path);
+
+	printf("DIR PATH %s\n", path);
+
+	// Walks the cursor up to 6 bytes to remove "./root" from path pointer
+	
+	//path += 6;
+
+	// Dynamically inserts links to directories in the html content
+	if (d) {
+		while ((dir = readdir(d)) != NULL) {
+			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
+				continue;
+			}
+			printf("%s\n", dir -> d_name);
+			
+			int dir_element_length = strlen(abs_path) + strlen(dir -> d_name) + 1;
+			char* dir_element = (char*) malloc (sizeof(char) * dir_element_length);
+			snprintf(dir_element, dir_element_length, "%s%s", abs_path, dir -> d_name);
+
+			struct stat statbuf;
+			int fd = open(dir_element, O_RDONLY);
+			fstat(fd, &statbuf);
+
+			if(S_ISDIR(statbuf.st_mode)){
+				char link[snprintf(NULL, 0, "{%s:directory}\n", dir -> d_name)];
+		    	sprintf(link, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+
+			    temp_content_length += strlen(link);
+		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+		    	strncat(temp_content, link, strlen(link));
+			} else {
+				char link[snprintf(NULL, 0, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
+		    	sprintf(link, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
+
+		    	temp_content_length += strlen(link);
+	    		temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
+	    		strncat(temp_content, link, strlen(link));
+			}
+			
+		}
+		    	
+	    closedir(d);
+	}
+}
+
 void serve_file(void *client_socket, HTTP_REQUEST *req){
 
 	char *dot = strrchr(req -> path, '.');
@@ -303,7 +368,17 @@ void request_handler(void *client_socket) {
 			printf("PATH: %s\n", req -> path);
 
 			if((fd = open(req -> path, O_RDONLY, 0)) <= 0){
-				error_404(client_socket);	
+				printf("COULDNT OPEN FD\n");
+				char* ret = strstr(req -> path, "virtual");
+				printf("RET %s\n", ret);
+				if(ret != NULL) {
+					char *dot = strrchr(req -> path, '.');
+					printf("%s\n", dot);
+					if(strcmp(".json", dot) == 0){
+						send_dir_json(client_socket, req);
+					}
+				}
+				//error_404(client_socket);	
 	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
 			} else {
 				fstat(fd, &statbuf);
@@ -330,8 +405,6 @@ void request_handler(void *client_socket) {
 					free(header);
 					free(resp);
 					close(fd);
-
-
 				} 
 				/* If it's a non-executable regular file */
 				else if(S_ISREG(statbuf.st_mode)){
