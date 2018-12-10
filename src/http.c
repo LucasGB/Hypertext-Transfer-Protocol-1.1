@@ -20,6 +20,7 @@
 #include "dirent.h"
 #include "utils.h"
 #include "embedded_c_compiler.h"
+#include "cJSON.h"
 
 #define BUFSIZ 256
 
@@ -44,6 +45,7 @@ mime_map meme_types [] = {
     {".svg", "image/svg+xml"},
     {".xml", "text/xml"},
     {".o", "text/html"},
+    {".json", "application/json"},
     {NULL, NULL},
 };
 
@@ -139,11 +141,14 @@ void render_directory_old(void *client_socket, HTTP_REQUEST *req) {
 			char* dir_element = (char*) malloc (sizeof(char) * dir_element_length);
 			snprintf(dir_element, dir_element_length, "%s%s", abs_path, dir -> d_name);
 
+			printf("DIR ELEMENT: %s\n", dir_element);
+
 			struct stat statbuf;
 			int fd = open(dir_element, O_RDONLY);
 			fstat(fd, &statbuf);
 
 			if(S_ISDIR(statbuf.st_mode)){
+
 				char link[snprintf(NULL, 0, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
 		    	sprintf(link, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
@@ -191,11 +196,20 @@ void render_directory_old(void *client_socket, HTTP_REQUEST *req) {
 }
 
 void send_dir_json(void *client_socket, HTTP_REQUEST *req){
-	int temp_json_length = strlen(temp_content);
-
 	DIR *d;
 	struct dirent *dir;
-	printf("CREATING JSON");
+	printf("CREATING JSON\n");
+	char *out;
+   	cJSON *root, *directories, *directory, *files, *file;
+
+   	/* create root node and array */
+   	root = cJSON_CreateObject();
+   	directories = cJSON_CreateArray();
+   	files = cJSON_CreateArray();
+
+   	/* add cars array to root */
+   	cJSON_AddItemToObject(root, "directories", directories);
+   	cJSON_AddItemToObject(root, "files", files);
 
 	char* prefix = "./root";
 
@@ -225,34 +239,68 @@ void send_dir_json(void *client_socket, HTTP_REQUEST *req){
 			}
 			printf("%s\n", dir -> d_name);
 			
-			int dir_element_length = strlen(abs_path) + strlen(dir -> d_name) + 1;
+			int dir_element_length = strlen(path) + strlen(dir -> d_name) + 1;
 			char* dir_element = (char*) malloc (sizeof(char) * dir_element_length);
-			snprintf(dir_element, dir_element_length, "%s%s", abs_path, dir -> d_name);
+			snprintf(dir_element, dir_element_length, "%s%s", path, dir -> d_name);
+
+			printf("DIR ELEMENT: %s\n", dir_element);
 
 			struct stat statbuf;
 			int fd = open(dir_element, O_RDONLY);
 			fstat(fd, &statbuf);
 
 			if(S_ISDIR(statbuf.st_mode)){
-				char link[snprintf(NULL, 0, "{%s:directory}\n", dir -> d_name)];
-		    	sprintf(link, "<br><a href=\"%s%s/\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
-			    temp_content_length += strlen(link);
-		    	temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-		    	strncat(temp_content, link, strlen(link));
+				/* add directory content array */
+				cJSON_AddItemToArray(directories, directory = cJSON_CreateObject());
+				cJSON_AddItemToObject(directory, "name", cJSON_CreateString(dir -> d_name));
+
 			} else {
+				/* add file contentarray */
+				cJSON_AddItemToArray(files, file = cJSON_CreateObject());
+				cJSON_AddItemToObject(file, "name", cJSON_CreateString(dir -> d_name));
+/*
+
 				char link[snprintf(NULL, 0, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
 		    	sprintf(link, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
 
 		    	temp_content_length += strlen(link);
 	    		temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
 	    		strncat(temp_content, link, strlen(link));
+*/
 			}
 			
 		}
 		    	
 	    closedir(d);
 	}
+
+	/* print everything */
+	out = cJSON_Print(root);
+	printf("%s\n", out);
+	printf("LEN OUT: %d\n", strlen(out));
+
+	int header_size = strlen("HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: \r\n\r\n") + strlen(req -> cookie) + snprintf(NULL, 0, "%d", strlen(out)) + 1;
+	printf("SIZE HEADER: %d\n", header_size);
+
+	// Creates a header string with the size of temp_header length plus the string size of html content length
+	char *header = (char*) malloc (sizeof(char) * header_size);
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: %d\n%s\r\n\r\n", strlen(out), req -> cookie);
+
+	// Creates response  with the necessary size. (header length  + content length)
+	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + strlen(out)));
+
+	// Concatenates header and html to response
+	strcpy(resp, header);
+	strcat(resp, out);
+
+	send_new(*(int*) client_socket, resp);
+
+   	/* free all objects under root and root itself */
+   	cJSON_Delete(root);
+
+	free(header);
+	free(resp);
 }
 
 void serve_file(void *client_socket, HTTP_REQUEST *req){
@@ -417,6 +465,7 @@ void request_handler(void *client_socket) {
 				/* If it's a directory */
 				} else if(S_ISDIR(statbuf.st_mode)){
 					render_directory(client_socket, req);
+					//render_directory_old(client_socket, req);
 				}
 			}
 
