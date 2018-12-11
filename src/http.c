@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <netinet/tcp.h>
+#include <time.h>
 
 #include "connect.h"
 #include "parser.h"
@@ -24,59 +25,40 @@
 
 #define BUFSIZ 256
 
-typedef struct {
-    const char *extension;
-    const char *mime_type;
-} mime_map;
+int n_requests = 0;
+time_t start_t, end_t;
+double diff_t;
 
-mime_map meme_types [] = {
-    {".css", "text/css"},
-    {".gif", "image/gif"},
-    {".htm", "text/html"},
-    {".html", "text/html"},
-    {".dyn", "text/html"},
-    {".jpeg", "image/jpeg"},
-    {".jpg", "image/jpeg"},
-    {".ico", "image/x-icon"},
-    {".js", "application/javascript"},
-    {".pdf", "application/pdf"},
-    {".mp4", "video/mp4"},
-    {".png", "image/png"},
-    {".svg", "image/svg+xml"},
-    {".xml", "text/xml"},
-    {".o", "text/html"},
-    {".json", "application/json"},
-    {NULL, NULL},
-};
+void render_telemetria(void *client_socket, HTTP_REQUEST *req){
+	printf("SENDING TELEMETRIA HTML\n");
+	char* path = strdup("./res/templates/telemetria.html");
 
-char *default_mime_type = "text/plain";
+	char *file_type = get_mime_type(path);
+	int file_size = get_file_size(path);
+	printf("SIZE: %d\n", file_size);
+	printf("%s\n", file_type);
+	
+	int header_size = strlen(file_type) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+	char *header = (char*) malloc (sizeof(char) * header_size);
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\n%s\r\n\r\n", file_type, file_size, req -> cookie);
+	
+	send_new(*(int*) client_socket, header);
+	
+	int remain_data = file_size;
+	int sent_bytes = 0;
+	off_t offset = 0;
+	int fd = open(path, O_RDONLY);
+	// Force flush socket stream
+	while(((sent_bytes = sendfile(*(int*) client_socket, fd, &offset, 256)) > 0) && remain_data > 0) {
+		int flag = 1;
+		setsockopt(*(int*) client_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+		remain_data -= sent_bytes;
+		flag = 0; 
+		setsockopt(*(int*) client_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+	}
 
-static const char* get_mime_type(char *filename){
-    char *dot = strrchr(filename, '.');
-    if(dot){ // strrchar Locate last occurrence of character in string
-        mime_map *map = meme_types;
-        while(map->extension){
-            if(strcmp(map->extension, dot) == 0){
-                return map->mime_type;
-            }
-            map++;
-        }
-    }
-    return default_mime_type;
-}
-
-static const char* get_file_extention(char *filename){
-    char *dot = strrchr(filename, '.');
-    if(dot){ // strrchar Locate last occurrence of character in string
-        mime_map *map = meme_types;
-        while(map->extension){
-            if(strcmp(map->extension, dot) == 0){
-                return map->extension;
-            }
-            map++;
-        }
-    }
-    return default_mime_type;
+	close(fd);
+	free(header);
 }
 
 void render_directory(void *client_socket, HTTP_REQUEST *req){
@@ -199,6 +181,7 @@ void send_dir_json(void *client_socket, HTTP_REQUEST *req){
 	DIR *d;
 	struct dirent *dir;
 	printf("CREATING JSON\n");
+	
 	char *out;
    	cJSON *root, *directories, *directory, *files, *file;
 
@@ -297,10 +280,42 @@ void send_dir_json(void *client_socket, HTTP_REQUEST *req){
 	send_new(*(int*) client_socket, resp);
 
    	/* free all objects under root and root itself */
-   	cJSON_Delete(root);
+   	//cJSON_Delete(root);
 
-	free(header);
-	free(resp);
+	//free(header);
+	//free(resp);
+}
+
+void send_telemetria_json(void *client_socket, HTTP_REQUEST *req){
+	time(&end_t);
+
+	diff_t = difftime(end_t, start_t);
+
+	char *out;
+ 	cJSON *root, *up_time, *requests;
+
+	root = cJSON_CreateObject();
+  	cJSON_AddItemToObject(root, "up_time", cJSON_CreateNumber(diff_t));
+  	cJSON_AddItemToObject(root, "n_requests", cJSON_CreateNumber(n_requests/ 2 + 1));
+
+  	out = cJSON_Print(root);
+	printf("%s\n", out);
+
+	int header_size = strlen("HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: \r\n\r\n") + strlen(req -> cookie) + snprintf(NULL, 0, "%d", strlen(out)) + 1;
+	printf("SIZE HEADER: %d\n", header_size);
+
+	// Creates a header string with the size of temp_header length plus the string size of html content length
+	char *header = (char*) malloc (sizeof(char) * header_size);
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: %d\n%s\r\n\r\n", strlen(out), req -> cookie);
+
+	// Creates response  with the necessary size. (header length  + content length)
+	char* resp = (char*) malloc (sizeof(char) * (strlen(header) + strlen(out)));
+
+	// Concatenates header and html to response
+	strcpy(resp, header);
+	strcat(resp, out);
+
+	send_new(*(int*) client_socket, resp);
 }
 
 void serve_file(void *client_socket, HTTP_REQUEST *req){
@@ -383,6 +398,8 @@ int authenticate(void *client_socket, HTTP_REQUEST* req){
 
 void request_handler(void *client_socket) {
 	HTTP_REQUEST* req = (HTTP_REQUEST*) malloc (sizeof(HTTP_REQUEST));
+
+	n_requests += 1;
 	int fd;
 	int sent_bytes = 0;
 	int remain_data;
@@ -420,13 +437,20 @@ void request_handler(void *client_socket) {
 				char* ret = strstr(req -> path, "virtual");
 				printf("RET %s\n", ret);
 				if(ret != NULL) {
-					char *dot = strrchr(req -> path, '.');
-					printf("%s\n", dot);
-					if(strcmp(".json", dot) == 0){
+					if(strcmp("virtual/dir.json", ret) == 0){
 						send_dir_json(client_socket, req);
 					}
+					else if(strcmp("virtual/telemetria.html", ret) == 0){
+						render_telemetria(client_socket, req);
+					}
+					else if(strcmp("virtual/telemetria.json", ret) == 0){
+						send_telemetria_json(client_socket, req);
+					} else {
+						error_404(client_socket, req);	
+					}
+				} else {
+					error_404(client_socket, req);
 				}
-				//error_404(client_socket);	
 	            fprintf(stderr, "Error opening file --> %s", strerror(errno));
 			} else {
 				fstat(fd, &statbuf);
@@ -488,6 +512,7 @@ void send_new(int fd, char *msg) {
 
 int main(int argc, char* argv[]) {
 
+	time(&start_t);
 	//	char request_buffer[BUFFER_SIZE];
 	int *client_socket;
 

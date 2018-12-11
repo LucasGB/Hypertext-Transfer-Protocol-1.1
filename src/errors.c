@@ -1,4 +1,14 @@
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <sys/sendfile.h>
+#include <fcntl.h>
+#include <netinet/tcp.h>
+
+#include "http_request.h"
+#include "dirent.h"
+#include "utils.h"
 
 void error_401(void* client_socket){
 	char* response = strdup("HTTP/1.1 401 Unauthorized\nWWW-Authenticate: Basic realm=\"Whatever\"\r\n\r\n");
@@ -11,22 +21,44 @@ void error_401(void* client_socket){
 	free(response);
 }
 
-void error_404(void* client_socket) {
-	char* temp_header = strdup("HTTP/1.1 404 Not Found\nContent-Type: text/html\nContent-Length: \r\n\r\n");
-	char* html_body = strdup("<!DOCTYPE html>\n<head>    \n<title>We've got some trouble | 404 - Resource not found</title>\n</head>\n<body>    \n<div class=\"cover\"><h1>Resource not found <small>Error 404</small></h1><p class=\"lead\">The requested resource could not be found but may be available again in the future.</p></div>    \n<footer><p>Technical Contact: <a href=\"mailto:x@example.com\">x@example.com</a></p></footer>\n</body>\n</html>");
+void error_404(void* client_socket, HTTP_REQUEST *req) {
+	printf("SENDING 404 HTML\n");
+	char* path = strdup("./res/templates/404/index.html");
 
+	char *file_type = get_mime_type(path);
+	int file_size = get_file_size(path);
+	printf("SIZE: %d\n", file_size);
+	printf("%s\n", file_type);
 	
-	int html_body_length = strlen(html_body);
-	int header_length = strlen(temp_header) + snprintf(NULL, 0, "%d", html_body_length) + 1;
-
-	char* response = (char*) malloc (sizeof(char) * (header_length + html_body_length));
-	snprintf(response, header_length + html_body_length, "HTTP/1.1 404 Not Found\nContent-Type: text/html\nContent-Length: %d\r\n\r\n%s", html_body_length, html_body);
-
-	if(send(*(int*) client_socket, response, strlen(response), 0) == -1) {
-		printf("Error in send\n");
+	int header_size = strlen(file_type) + strlen(req -> cookie) + snprintf(NULL, 0, "%d", file_size) + strlen("HTTP/1.1 200 OK\nContent-Type: \nContent-Length: \r\n\r\n") + 1;
+	printf("CALC HEADER SIZE\n");
+	char *header = (char*) malloc (sizeof(char) * header_size);
+	printf("MALLOC HEADER\n");
+	snprintf(header, header_size, "HTTP/1.1 200 OK\nContent-Type: %s\nContent-Length: %d\n%s\r\n\r\n", file_type, file_size, req -> cookie);
+	printf("%s\n", header);
+	
+	send_new(*(int*) client_socket, header);
+	
+	int remain_data = file_size;
+	int sent_bytes = 0;
+	off_t offset = 0;
+	//int fd = open(path, O_RDONLY);
+	int fd;
+	if((fd = open(path, O_RDONLY, 0)) <= 0){
+		printf("COULDNT OPEN FD SEND\n");
 	}
 
-	free(response);
-	free(html_body);
-	free(temp_header);
+	// Force flush socket stream
+	while(((sent_bytes = sendfile(*(int*) client_socket, fd, &offset, 256)) > 0) && remain_data > 0) {
+		int flag = 1;
+		setsockopt(*(int*) client_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+		remain_data -= sent_bytes;
+		flag = 0; 
+		setsockopt(*(int*) client_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+	}
+
+	printf("sent stuff\n");
+
+	close(fd);
+	free(header);
 }

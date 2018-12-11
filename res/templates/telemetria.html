@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>HTTP Server</title>
+</head>
+<body onload="get_status()">
+
+<h1>Telemetria</h1>
+
+<div id="up_time">Up Time: </div>
+<div id="n_requests">Requisições atendidas: </div>
+
+<script type="text/javascript">
+	function reqListener () {
+
+  		var json_string = this.responseText.concat("}");
+
+  		console.log(json_string);
+
+  		var json = JSON.parse(json_string);
+
+		console.log(json);
+
+		document.getElementById("up_time").innerText += " " + json.up_time + " segundos"
+		document.getElementById("n_requests").innerText += " " + json.n_requests
+	}
+
+	function get_status() {
+		var oReq = new XMLHttpRequest();
+		oReq.addEventListener("load", reqListener);
+		var url = "/virtual/telemetria.json?" + window.location.pathname;
+		console.log(url);
+		oReq.open("GET", url);
+		oReq.send();	
+	}
+</script>
+
+</body>
+
+</html>
