@@ -2,49 +2,50 @@
 <html>
 <head>
 	<title>HTTP Server</title>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 </head>
 <body onload="render_dir()">
+	<table id="table" class="table table-hover">
+  <thead>
+    <tr>
+      <th scope="col">Nome</th>
+      <th scope="col">Tamanho</th>
+      <th scope="col">Modificado</th>
+    </tr>
+  </thead>
+  <tbody>
+  	<tr onclick="window.location='certificados/'"><td>certificados</td><td>--</td><td>25-09-18</td></tr>
+  </tbody>
+</table>
 
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
 
 <script type="text/javascript">
+	
 	function reqListener () {
 
   		var json_string = this.responseText.concat("}");
 
-  		console.log(json_string);
-
   		var json = JSON.parse(json_string);
 
-		console.log(json.directories);
+		var table = document.getElementById("table");
 
 		for(var i in json.directories){
-			console.log(json.directories[i].name);
-
-			var p = document.createElement('p');
-			var a = document.createElement('a');
-			var linkText = document.createTextNode(json.directories[i].name);
-			a.appendChild(linkText);
-			a.title = json.directories[i].name;
-			a.href = json.directories[i].name.concat("/");
-
-			p.appendChild(a);
-
-			document.body.appendChild(p);
+			$(table).find('tbody').append("<tr class='clickable-row' data-href='"+ json.directories[i].name.concat("/") + "'>"
+				+ "<td>" + json.directories[i].name + "</td>"
+				+ "<td>" + json.directories[i].size  + "</td>"
+				+ "<td>" + json.directories[i].modified + "</td>"
+				+ "</tr>")
 		}
 
 		for(var i in json.files){
-			console.log(json.files[i].name);
-
-			var p = document.createElement('p');
-			var a = document.createElement('a');
-			var linkText = document.createTextNode(json.files[i].name);
-			a.appendChild(linkText);
-			a.title =json.files[i].name;
-			a.href = json.files[i].name;
-
-			p.appendChild(a);
-
-			document.body.appendChild(p);
+			$(table).find('tbody').append("<tr class='clickable-row' onclick='window.location='" + json.files[i].name.concat("/") + "'>"
+				+ "<td>" + json.files[i].name + "</td>"
+				+ "<td>" + json.files[i].size  + "</td>"
+				+ "<td>" + json.files[i].modified + "</td></tr>")
 		}
 	}
 
@@ -52,10 +53,18 @@
 		var oReq = new XMLHttpRequest();
 		oReq.addEventListener("load", reqListener);
 		var url = "/virtual/dir.json?" + window.location.pathname;
-		console.log(url);
 		oReq.open("GET", url);
 		oReq.send();	
+
+		jQuery(document).ready(function($) {
+    	$(".clickable-row").click(function() {
+        	window.location = $(this).data("data-href");
+    	});
+	});
 	}
+
+	
+
 </script>
 
 </body>

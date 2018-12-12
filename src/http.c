@@ -210,10 +210,6 @@ void send_dir_json(void *client_socket, HTTP_REQUEST *req){
 
 	printf("DIR PATH %s\n", path);
 
-	// Walks the cursor up to 6 bytes to remove "./root" from path pointer
-	
-	//path += 6;
-
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
@@ -231,26 +227,27 @@ void send_dir_json(void *client_socket, HTTP_REQUEST *req){
 			struct stat statbuf;
 			int fd = open(dir_element, O_RDONLY);
 			fstat(fd, &statbuf);
+			char date[10];
+			strftime(date, 10, "%d-%m-%y", localtime(&(statbuf.st_ctime)));
+			printf("%s\n", date);
+			off_t size = statbuf.st_size;
 
 			if(S_ISDIR(statbuf.st_mode)){
 
 				/* add directory content array */
 				cJSON_AddItemToArray(directories, directory = cJSON_CreateObject());
 				cJSON_AddItemToObject(directory, "name", cJSON_CreateString(dir -> d_name));
+				cJSON_AddItemToObject(directory, "modified", cJSON_CreateString(date));
+				cJSON_AddItemToObject(directory, "size", cJSON_CreateString("--"));
+				
 
 			} else {
 				/* add file contentarray */
 				cJSON_AddItemToArray(files, file = cJSON_CreateObject());
 				cJSON_AddItemToObject(file, "name", cJSON_CreateString(dir -> d_name));
-/*
+				cJSON_AddItemToObject(file, "modified", cJSON_CreateString(date));
+				cJSON_AddItemToObject(file, "size", cJSON_CreateNumber(size));
 
-				char link[snprintf(NULL, 0, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name)];
-		    	sprintf(link, "<br><a href=\"%s%s\">%s</a>\n", path, dir -> d_name, dir -> d_name);
-
-		    	temp_content_length += strlen(link);
-	    		temp_content = (char*) realloc (temp_content, sizeof(char) * temp_content_length + 1);
-	    		strncat(temp_content, link, strlen(link));
-*/
 			}
 			
 		}
