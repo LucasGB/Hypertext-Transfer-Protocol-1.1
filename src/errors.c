@@ -10,6 +10,21 @@
 #include "dirent.h"
 #include "utils.h"
 
+void error_301(void* client_socket, HTTP_REQUEST *req) {
+	//snprintf(header, header_size, "HTTP/1.1 301 Moved Permanently\nLocation: \n");
+/*
+	int response_size = snprintf(NULL, 0, "HTTP/1.1 301 Moved Permanently\nLocation: %s/", req -> path) + 1;
+	//char* response = 
+	//strdup("HTTP/1.1 301 Moved Permanently\nLocation: ");
+
+	if(send(*(int*) client_socket, response, strlen(response), 0) == -1) {
+		printf("Error in send\n");
+	}
+
+	printf("sent resp\n");
+	free(response);*/
+}
+
 void error_401(void* client_socket){
 	char* response = strdup("HTTP/1.1 401 Unauthorized\nWWW-Authenticate: Basic realm=\"Whatever\"\r\n\r\n");
 

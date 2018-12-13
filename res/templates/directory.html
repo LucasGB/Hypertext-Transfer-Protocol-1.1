@@ -24,7 +24,7 @@
 
 <script type="text/javascript">
 	
-	function reqListener () {
+	function reqListener() {
 
   		var json_string = this.responseText.concat("}");
 
@@ -47,7 +47,7 @@
 
 			$(table).find('tbody').append("<tr class='clickable-row' onclick=" + href + ">"
 				+ "<td>" + json.files[i].name + "</td>"
-				+ "<td>" + bytesToSize(json.files[i].size)  + "</td>"
+				+ "<td>" + json.files[i].size  + "</td>"
 				+ "<td>" + json.files[i].modified + "</td></tr>")
 		}
 	}
@@ -60,10 +60,10 @@
 		oReq.send();	
 
 		jQuery(document).ready(function($) {
-    	$(".clickable-row").click(function() {
-        	window.location = $(this).data("data-href");
-    	});
-	});
+    		$(".clickable-row").click(function() {
+        		window.location = $(this).data("data-href");
+    		});
+		});
 	}
 
 	function sortTable(n) {
@@ -121,10 +121,14 @@
 
 	function bytesToSize(bytes) {
 	   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+	   
 	   if (bytes == 0) return '0 Byte';
+	   
 	   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+	   
 	   return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
-	};
+	}
+
 </script>
 
 </body>

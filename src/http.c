@@ -488,8 +488,10 @@ void request_handler(void *client_socket) {
 					}
 				/* If it's a directory */
 				} else if(S_ISDIR(statbuf.st_mode)){
+					//if(string_ends_with(req -> path, "/") == 0){
+						//error_301(client_socket, req);
+					//}
 					render_directory(client_socket, req);
-					//render_directory_old(client_socket, req);
 				}
 			}
 

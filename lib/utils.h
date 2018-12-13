@@ -6,5 +6,6 @@ char *slice(char *string, int start, int stop, int step);
 pid_t popen2(const char *command, int *infp, int *outfp);
 char* get_mime_type(char *filename);
 char* get_file_extention(char *filename);
+int string_ends_with(char * str, char * suffix);
 
 #endif

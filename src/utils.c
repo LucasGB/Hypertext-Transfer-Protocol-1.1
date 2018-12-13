@@ -80,3 +80,10 @@ char* get_file_extention(char *filename){
     }
     return default_mime_type;
 }
+
+int string_ends_with(char * str, char * suffix) {
+  int str_len = strlen(str);
+  int suffix_len = strlen(suffix);
+
+  return (str_len >= suffix_len) && (0 == strcmp(str + (str_len-suffix_len), suffix));
+}
