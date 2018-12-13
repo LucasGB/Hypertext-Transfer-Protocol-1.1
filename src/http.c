@@ -213,7 +213,10 @@ void send_dir_json(void *client_socket, HTTP_REQUEST *req){
 	// Dynamically inserts links to directories in the html content
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
-			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..")){
+			if(!strcmp(dir -> d_name, ".") || !strcmp(dir -> d_name, "..") || 
+				!strcmp(dir -> d_name, "3rdpartylicenses.txt") || !strcmp(dir -> d_name, "favicon.ico") || 
+				!strcmp(dir -> d_name, "main.5943c4b105b85d7298ee.js") || !strcmp(dir -> d_name, "polyfills.20ab2d163684112c2aba.js") || 
+				!strcmp(dir -> d_name, "runtime.ec2944dd8b20ec099bf3.js") || !strcmp(dir -> d_name, "styles.3ff695c00d717f2d2a11.css")){
 				continue;
 			}
 			printf("%s\n", dir -> d_name);
